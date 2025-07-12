@@ -1,0 +1,13 @@
+{
+    "config": {
+      "window": {
+        "width": 800,
+        "height": 600,
+        "theme": {
+          "background": "#ffffff",
+          "foreground": "#222222"
+        }
+      }
+    }
+  }
+  
