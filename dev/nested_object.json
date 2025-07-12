@@ -1,0 +1,11 @@
+{
+    "user": {
+      "id": 42,
+      "profile": {
+        "username": "alice42",
+        "email": "alice@example.com"
+      }
+    },
+    "roles": ["admin", "user"]
+  }
+  
