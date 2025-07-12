@@ -1,5 +1,3 @@
----
-
 ### 1. **Define the Project**
 
 - **Goal:** What exactly do you want to build? (Be specific.)
