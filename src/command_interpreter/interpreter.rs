@@ -1,42 +1,22 @@
-use crate::command_interpreter::interpreter_parts::commands::{self, Command};
+use crate::appstate::AppState;
+use crate::context::context::Context;
 
-pub struct InterpreterBuilder {
-    commands: Vec<Command>,
+use crate::command_interpreter::types::{AST, Effect, Token};
+
+pub fn interpret(state: &AppState, ctx: &Context, user_input: &str) -> Effect {
+    let tokens = lexer(user_input);
+    let ast = parse(tokens, ctx);
+    eval(ast)
 }
 
-impl InterpreterBuilder {
-    pub fn new() -> Self {
-        InterpreterBuilder { commands: vec![] }
-    }
-
-    pub fn set_command(&mut self, command: Command) -> &mut Self {
-        &self.commands.push(command);
-        self
-    }
-
-    pub fn build(&mut self) -> Interpreter {
-        Interpreter::from(self)
-    }
+fn lexer(user_input: &str) -> Vec<Token> {
+    vec![Token {}]
 }
 
-pub struct Interpreter {
-    commands: Vec<Command>,
+fn parse(tokens: Vec<Token>, ctx: &Context) -> AST {
+    AST {}
 }
 
-impl Interpreter {
-    pub fn from(builder: &mut InterpreterBuilder) -> Interpreter {
-        Interpreter {
-            commands: builder.commands,
-        }
-    }
-
-    pub fn set_commands(&mut self, commands: Vec<Command>) {
-        &self.set_commands(commands);
-    }
-
-    pub fn parse() {}
-    pub fn eval() {}
-    pub fn apply() {}
+fn eval(ast: AST) -> Effect {
+    Effect {}
 }
-
-pub fn interpret(app_state: &AppState, input: &str) -> () {}

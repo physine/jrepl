@@ -23,4 +23,12 @@ Command:
 
 */
 
-pub struct Command {}
+pub struct Command {
+    pub symbol: String,
+}
+
+pub fn get_commands() -> Vec<Command> {
+    vec![Command {
+        symbol: String::from("help"),
+    }]
+}
