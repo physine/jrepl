@@ -12,6 +12,7 @@ Command:
         transform data,
         create symbol,
         set symbol
+        do [expr]
     )
 
     - expr (
@@ -23,12 +24,31 @@ Command:
 
 */
 
+use clap::builder::Str;
+
+/*
+
+Symbol = command | data
+command =
+
+*/
 pub struct Command {
     pub symbol: String,
+    pub params: Vec<Expr>,
+}
+
+impl Command {
+    pub fn parse(tokens: &Vec<String>) -> &Vec<String> {}
 }
 
 pub fn get_commands() -> Vec<Command> {
-    vec![Command {
-        symbol: String::from("help"),
-    }]
+    vec![
+        /*
+        (help)
+        */
+        Command {
+            symbol: String::from("help"),
+            params: vec![],
+        },
+    ]
 }

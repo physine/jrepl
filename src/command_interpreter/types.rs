@@ -10,7 +10,9 @@ pub struct Token {}
 pub struct Effect {}
 
 impl Effect {
-    pub fn exe(&self) {}
+    pub fn exe(&self) {
+        // println!("exe");
+    }
 }
 
 pub struct AST {}

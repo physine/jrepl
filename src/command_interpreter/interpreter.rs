@@ -1,3 +1,5 @@
+use clap::builder::Str;
+
 use crate::appstate::AppState;
 use crate::context::context::Context;
 
@@ -10,12 +12,36 @@ pub fn interpret(state: &AppState, ctx: &Context, user_input: &str) -> Effect {
 }
 
 fn lexer(user_input: &str) -> Vec<String> {
-    let tokens: Vec<String> = Vec::new();
-    for c in &user_input.as_bytes().iter().next() {
-        println!("c: {}", c);
+    let mut tokens: Vec<String> = Vec::new();
+    let mut acc = String::from("");
+
+    for char in user_input.chars() {
+        if char == '(' || char == ')' {
+            if !acc.is_empty() {
+                tokens.push(acc.clone());
+                acc.clear();
+            }
+            tokens.push(char.to_string());
+        } else if char.is_alphanumeric() {
+            acc.push(char);
+        } else if char == ' ' {
+            if !acc.is_empty() {
+                tokens.push(acc.clone());
+                acc.clear();
+            }
+        }
     }
 
-    vec!["(".to_owned(), "help".to_owned(), ")".to_owned()]
+    /*
+        syntax varification
+            - balanced brackets.
+            - all "symbols" are real.
+
+    */
+    let mut itr = tokens.clone().into_iter().enumerate();
+    while let Some(tkn) = itr.next() {}
+
+    tokens
 }
 
 fn parse(tokens: Vec<String>, ctx: &Context) -> AST {
@@ -52,13 +78,23 @@ mod test {
             lexer("(help)"),
             vec!["(".to_owned(), "help".to_owned(), ")".to_owned()]
         );
+
+        assert_eq!(
+            lexer("(undo)"),
+            vec!["(".to_owned(), "undo".to_owned(), ")".to_owned()]
+        );
+
+        assert_eq!(
+            lexer("(quit)"),
+            vec!["(".to_owned(), "quit".to_owned(), ")".to_owned()]
+        );
     }
 
     #[test]
-    fn lexer_white_space_in_command() {
+    fn lexer_white_space_in_command_allowed() {
         assert_eq!(
-            lexer("( help )"),
-            vec!["(".to_owned(), "undo".to_owned(), ")".to_owned()]
+            (lexer("( help   )")),
+            vec!["(".to_owned(), "help".to_owned(), ")".to_owned()]
         );
     }
 }
