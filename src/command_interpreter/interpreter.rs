@@ -10,6 +10,11 @@ pub fn interpret(state: &AppState, ctx: &Context, user_input: &str) -> Effect {
 }
 
 fn lexer(user_input: &str) -> Vec<String> {
+    let tokens: Vec<String> = Vec::new();
+    for c in &user_input.as_bytes().iter().next() {
+        println!("c: {}", c);
+    }
+
     vec!["(".to_owned(), "help".to_owned(), ")".to_owned()]
 }
 
@@ -23,16 +28,37 @@ fn eval(ast: AST) -> Effect {
 
 #[cfg(test)]
 mod test {
+    /*
+
+    - (help)
+    - (quit)
+    - (undo)
+
+    - (load <file_path.json>)
+
+    - (search <symbol-name> <target-text>)
+    - (tranform <symbol-name> <target-text>)
+
+    - (do [<expr>])
+    - (def <symbol-name> <expr>)
+
+    */
 
     use super::*;
 
     #[test]
-    fn lexer_verify() {
-        let input = "(help)";
-        let tokens = lexer(input);
+    fn lexer_simple_command() {
         assert_eq!(
-            tokens,
+            lexer("(help)"),
             vec!["(".to_owned(), "help".to_owned(), ")".to_owned()]
+        );
+    }
+
+    #[test]
+    fn lexer_white_space_in_command() {
+        assert_eq!(
+            lexer("( help )"),
+            vec!["(".to_owned(), "undo".to_owned(), ")".to_owned()]
         );
     }
 }
