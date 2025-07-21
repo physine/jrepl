@@ -1,14 +1,18 @@
-use clap::builder::Str;
-
 use crate::appstate::AppState;
 use crate::context::context::Context;
 
-use crate::command_interpreter::types::{AST, Effect, Token};
+use crate::command_interpreter::types::{AST, Effect, EvalValue};
+
+use crate::command_interpreter::types::Expr;
 
 pub fn interpret(state: &AppState, ctx: &Context, user_input: &str) -> Effect {
     let tokens = lexer(user_input);
-    let ast = parse(tokens, ctx);
-    eval(ast)
+    verify(&tokens);
+    let ast = parse(&tokens, &ctx);
+    let value = eval(&state, &ast, &ctx);
+    Effect {
+        value: EvalValue::None,
+    }
 }
 
 fn lexer(user_input: &str) -> Vec<String> {
@@ -32,6 +36,10 @@ fn lexer(user_input: &str) -> Vec<String> {
         }
     }
 
+    tokens
+}
+
+fn verify(tokens: &Vec<String>) {
     /*
         syntax varification
             - balanced brackets.
@@ -40,16 +48,16 @@ fn lexer(user_input: &str) -> Vec<String> {
     */
     let mut itr = tokens.clone().into_iter().enumerate();
     while let Some(tkn) = itr.next() {}
-
-    tokens
 }
 
-fn parse(tokens: Vec<String>, ctx: &Context) -> AST {
-    AST {}
+fn parse(tokens: &Vec<String>, ctx: &Context) -> AST {
+    AST {
+        expr: Expr::Bool(true),
+    }
 }
 
-fn eval(ast: AST) -> Effect {
-    Effect {}
+fn eval(state: &AppState, ast: &AST) -> EvalValue {
+    EvalValue::None
 }
 
 #[cfg(test)]
@@ -62,7 +70,7 @@ mod test {
 
     - (load <file_path.json>)
 
-    - (search <symbol-name> <target-text>)
+    - (search <target-text> [<symbol-nam>])
     - (tranform <symbol-name> <target-text>)
 
     - (do [<expr>])
@@ -70,7 +78,30 @@ mod test {
 
     */
 
+    use crate::command_interpreter::commands::get_commands;
+
     use super::*;
+
+    fn ctx() -> Context {
+        let mut ctx = Context::new();
+        let commands = get_commands();
+        ctx.set_commands(commands);
+        ctx
+    }
+
+    fn help_tokens() -> Vec<String> {
+        vec!["(".to_owned(), "help".to_owned(), ")".to_owned()]
+    }
+
+    #[test]
+    fn parse_simple_command() {
+        assert_eq!(
+            parse(&help_tokens(), &ctx()),
+            AST {
+                expr: Expr::Symbol(String::from("help"))
+            }
+        );
+    }
 
     #[test]
     fn lexer_simple_command() {
