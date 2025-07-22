@@ -31,12 +31,21 @@ command =
 
 */
 
+use serde_json::Value;
+
+use crate::{appstate::AppState, command_interpreter::types::Expr, context::context::Context};
+
 pub struct Command {
     pub symbol: String,
     pub description: String,
     // pub param_format: String,
 
-    fn eval(&AppState, &AST) -> EvalValue,
+    /*
+        Function pointers for:
+            1. parse() ->
+            2. eval() -> Value
+    */
+    // fn eval(&AppState, &AST) -> EvalValue,
     // fn with trait eval and takes the args, and evaluates to a value
     // pub params: Vec<Expr>,
 }
@@ -44,50 +53,59 @@ pub struct Command {
 pub fn get_commands() -> Vec<Command> {
     vec![
         Command {
-            symbol: String::from("help"),
-            description: String::from(""),
+            symbol: "help".into(),
+            description: "".into(),
             // param_format: "",
+            // parse: |state: &AppState, ctx: &Context| -> Expr {
+            //     //
+            // },
         },
         Command {
-            symbol: String::from("search"),
-            description: String::from(""),
+            symbol: "search".into(),
+            description: "".into(),
             // param_format: [descripion="target-text" type="String" size="1"]
             //               [descripion="source to check against" type="File | String" size="1..n"]
         },
         Command {
-            symbol: String::from("list"),
-            description: String::from(""),
+            symbol: "list".into(),
+            description: "".into(),
             // param_format: [description="list the avaliable 'things (symbols, commands, files, etc)'" type="String" size="1..n"]
         },
         Command {
-            symbol: String::from("undo"),
-            description: String::from(""),
+            symbol: "undo".into(),
+            description: "".into(),
             // param_format: ""
         },
         Command {
-            symbol: String::from("quit"),
-            description: String::from(""),
+            symbol: "quit".into(),
+            description: "".into(),
             // param_format: ""
         },
         Command {
-            symbol: String::from("load"),
-            description: String::from(""),
+            symbol: "load".into(),
+            description: "".into(),
             // param_format: [description="files to load from disc" type="String" size="1..n"]
         },
         Command {
-            symbol: String::from("def"),
-            description: String::from(""),
+            symbol: "def".into(),
+            description: "".into(),
             // param_format: [description="Symbol name" type="String" size="1"]
             //               [description="value to be bound to the symbol" type="Expr" size="1"]
         },
         Command {
-            symbol: String::from("do"),
-            description: String::from(""),
+            symbol: "do".into(),
+            description: "".into(),
             // param_format: [description="Exprs to evaluate" type="Expr" size="1..n"]
         },
         Command {
-            symbol: String::from("set"),
-            description: String::from(""),
+            symbol: "set".into(),
+            description: "".into(),
+            // param_format: [description="existing symbol name" type="Expr" size="1"]
+            // param_format: [description="expression to eval and bind to the symbol" type="Expr" size="1"]
+        },
+        Command {
+            symbol: "print".into(),
+            description: "".into(),
             // param_format: [description="existing symbol name" type="Expr" size="1"]
             // param_format: [description="expression to eval and bind to the symbol" type="Expr" size="1"]
         },

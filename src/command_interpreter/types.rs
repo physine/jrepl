@@ -1,5 +1,4 @@
 #[derive(Debug, PartialEq)]
-
 pub enum EvalValue {
     // ------------ Literals/Terminals ----------
     String(String),
@@ -16,6 +15,7 @@ pub enum Expr {
     Number(f64),
     Bool(bool),
     None,
+    // Command(String),
     // File(File),
     // State(AppState)
     // --------------- Expandables ---------------
@@ -28,20 +28,10 @@ pub struct Effect {
 }
 
 impl Effect {
-    pub fn exe(&self) {
-        // println!("exe");
-    }
+    pub fn exe(&self) {}
 }
 
 #[derive(Debug, PartialEq)]
 pub struct AST {
     pub expr: Expr,
 }
-
-// pub trait Evaluate {
-//     fn eval(args: Vec<String>) -> EvalValue;
-// }
-
-// pub trait parse_params {
-//     fn parse(&self, args: Vec<String>) -> Expr;
-// }
