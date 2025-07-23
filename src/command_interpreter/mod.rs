@@ -1,6 +1,11 @@
 pub mod commands;
+pub mod eval;
 pub mod interpreter;
+pub mod lexer;
 pub mod types;
-// use types::
 use commands::Command;
 use commands::get_commands;
+use eval::eval;
+use lexer::lexer;
+pub mod parser;
+use parser::parse_top;
