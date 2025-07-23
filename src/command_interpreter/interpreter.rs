@@ -1,17 +1,15 @@
-use std::collections::VecDeque;
 use crate::appstate::AppState;
-use crate::context::context::Context;
-use crate::command_interpreter::types::{AST, Effect, EvalValue};
 use crate::command_interpreter::types::Expr;
+use crate::command_interpreter::types::{AST, Effect, EvalValue};
+use crate::context::context::Context;
+use regex::Regex;
 
 pub fn interpret(state: &AppState, ctx: &Context, user_input: &str) -> Effect {
     let tokens = lexer(user_input);
     verify(&tokens);
-    let expr = parse(tokens.clone());
+    let expr = parse_top(&tokens); // Use parse_top here!
     let value = eval(state, &expr, ctx);
-    Effect {
-        value: EvalValue::None,
-    }
+    Effect { value }
 }
 
 fn lexer(user_input: &str) -> Vec<String> {
@@ -39,71 +37,65 @@ fn lexer(user_input: &str) -> Vec<String> {
 }
 
 fn verify(tokens: &Vec<String>) {
-    /*
-        syntax varification
-            - balanced brackets.
-    */
+    // ...optional syntax checking for balanced parens...
     let mut itr = tokens.clone().into_iter().enumerate();
-    while let Some(tkn) = itr.next() {}
+    while let Some(_tkn) = itr.next() {}
 }
 
-fn parse(tokens: Vec<String>) -> Expr {
-    /*
-    // the load command used in an expression returns a symbol ($1) which evals to the file. So the $1 symbol is bound to the symbol visited_places.
-    (do
-        (def visited_places (load "places_ive_been.json"))
-        (print (map to_upper_case visited_places)))
-    */
+fn parse_top(tokens: &[String]) -> Expr {
+    let (expr, _) = parse_expr(tokens, 0);
+    expr
+}
 
-    // ["(", search, "hi", file1, file2, ")"]
-    
-    let token = tokens.first().unwrap();
-    let mut acc: Expr;
+fn parse_expr(tokens: &[String], mut i: usize) -> (Expr, usize) {
+    match tokens.get(i).map(|s| s.as_str()) {
+        Some("(") => {
+            i += 1;
+            let mut exprs = Vec::new();
+            while i < tokens.len() && tokens[i] != ")" {
+                let (expr, next_i) = parse_expr(tokens, i);
+                exprs.push(expr);
+                i = next_i;
+            }
+            (Expr::List(exprs), i + 1) // skip ')'
+        }
+        Some(")") => (Expr::None, i + 1),
+        Some(token) => (parse_terminal(token), i + 1),
+        None => (Expr::None, i),
+    }
+}
+
+fn parse_terminal(token: &str) -> Expr {
+    // String: starts and ends with quotes, not a number inside
+    let string_re = Regex::new(r#"^"[^0-9][^"]*"$"#).unwrap();
+    // Symbol: not quoted, not starting with a number, no whitespace or quotes
+    let symbol_re = Regex::new(r#"^[A-Za-z_][^\s"]*$"#).unwrap();
+    // Bool: true or false
+    let bool_re = Regex::new(r"^(true|false)$").unwrap();
+    // Number: int or float, not quoted
+    let number_re = Regex::new(r"^-?\d+(\.\d+)?$").unwrap();
 
     match token {
-        "(" => {
-            acc = Expr::List(
-
-            )
-            parse(&tokens[1..]);
+        t if string_re.is_match(t) => {
+            // Remove quotes, store as string
+            let inner = &t[1..t.len() - 1];
+            Expr::String(inner.to_string())
         }
-
-        ")" => {
-            return;
-        }
-
-        _ => {
-
-        }
+        t if symbol_re.is_match(t) => Expr::Symbol(t.to_string()),
+        t if bool_re.is_match(t) => Expr::Bool(t == "true"),
+        t if number_re.is_match(t) => Expr::Number(t.parse::<f64>().unwrap()),
+        _ => panic!("Unexpected token: '{}'", token),
     }
-
 }
 
-fn eval(state: &AppState, ast: &Expr, ctx: &Context) -> EvalValue {
+fn eval(_state: &AppState, _ast: &Expr, _ctx: &Context) -> EvalValue {
     EvalValue::None
 }
 
 #[cfg(test)]
 mod test {
-    /*
-
-    - (help)
-    - (quit)
-    - (undo)
-
-    - (load <file_path.json>)
-
-    - (search <target-text> [<symbol-nam>])
-    - (tranform <symbol-name> <target-text>)
-
-    - (do [<expr>])
-    - (def <symbol-name> <expr>)
-
-    */
-
-    use crate::command_interpreter::commands::get_commands;
-
     use super::*;
+    use crate::command_interpreter::commands::get_commands;
 
     fn ctx() -> Context {
         let mut ctx = Context::new();
@@ -113,18 +105,10 @@ mod test {
     }
 
     fn help_tokens() -> Vec<String> {
-        vec![
-            "(".into(),
-            "help".into(),
-            ")".into(), //
-        ]
+        vec!["(".into(), "help".into(), ")".into()]
     }
 
     fn search_tokens() -> Vec<String> {
-        // (search <type: String> [<type: File | String>])
-        // (search "hi" file1 file2)
-
-        // ["(", search, "hi", file1, file2, ")"]
         vec![
             "(".into(),
             "search".into(),
@@ -138,26 +122,27 @@ mod test {
     // ------------------- Parser Tests ------------------- //
 
     #[test]
-    fn no_depth_no_args_parse_help_command() {
+    fn parse_empty_expression() {
+        assert_eq!(parse_top(&vec!["(".into(), ")".into()]), Expr::List(vec![]));
+    }
+
+    #[test]
+    fn parse_help_command() {
         assert_eq!(
-            parse(help_tokens()),
-            Expr::Symbol("help".into())
+            parse_top(&help_tokens()),
+            Expr::List(vec![Expr::Symbol("help".into())])
         );
     }
 
     #[test]
-    fn no_depth_with_args_parse_search_command() {
-        // (search "hi" file1 file2)
-
-        // ["(", search, "hi", file1, file2, ")"]
-
+    fn parse_search_command() {
         assert_eq!(
-            parse(search_tokens()),
+            parse_top(&search_tokens()),
             Expr::List(vec![
-                    Expr::Symbol("search".into()),
-                    Expr::String("hi".into()),
-                    Expr::Symbol("file1".into()),
-                    Expr::Symbol("file2".into()),
+                Expr::Symbol("search".into()),
+                Expr::String("hi".into()),
+                Expr::Symbol("file1".into()),
+                Expr::Symbol("file2".into()),
             ])
         );
     }
@@ -185,7 +170,7 @@ mod test {
     #[test]
     fn lexer_white_space_in_command_allowed() {
         assert_eq!(
-            (lexer("( help   )")),
+            lexer("( help   )"),
             vec!["(".to_owned(), "help".to_owned(), ")".to_owned()]
         );
     }
