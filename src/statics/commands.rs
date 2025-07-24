@@ -1,54 +1,4 @@
-/*
-
-Command:
-    - symbol name (
-        help,
-        search,
-        list,
-        undo,
-        quit,
-        pritty print,
-        load json file,
-        transform data,
-        create symbol,
-        set symbol
-        do [expr]
-    )
-
-    - expr (
-        "(list <symbol>)"
-    )
-
-    fn eval(state: AppState) // destruct to whats only needed
-    fn undo(state: AppState) // destruct to whats only needed
-
-*/
-
-/*
-
-Symbol = command | data
-command =
-
-*/
-
-use serde_json::Value;
-
-use crate::{appstate::AppState, command_interpreter::types::Expr, context::context::Context};
-
-pub struct Command {
-    pub symbol: String,
-    pub description: String,
-    // pub param_format: String,
-
-    /*
-        Function pointers for:
-            1. parse() ->
-            2. eval() -> Value
-    */
-    // fn eval(&AppState, &AST) -> EvalValue,
-    // fn with trait eval and takes the args, and evaluates to a value
-    // pub params: Vec<Expr>,
-}
+use crate::command_interpreter::command::Command;
 
 pub fn get_commands() -> Vec<Command> {
     vec![
@@ -116,12 +66,3 @@ pub fn get_commands() -> Vec<Command> {
         // },
     ]
 }
-
-/*
-
-kinds of symbols:
-    File trait (input, output)
-    Data (json from a file, user defined variable)
-    Command
-
-*/

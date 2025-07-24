@@ -1,6 +1,4 @@
-use crate::Context;
 use crate::command_interpreter::types::Expr;
-use crate::get_commands;
 use regex::Regex;
 
 pub fn parse_top(tokens: &[String]) -> Expr {
@@ -51,6 +49,9 @@ fn parse_terminal(token: &str) -> Expr {
 
 #[cfg(test)]
 mod test {
+    use crate::context::context::Context;
+    use crate::statics::commands::get_commands;
+
     use super::*;
 
     fn ctx() -> Context {
