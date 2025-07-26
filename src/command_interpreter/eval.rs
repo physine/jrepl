@@ -6,7 +6,7 @@ use crate::{Context, command_interpreter::command};
 pub fn eval(app_state: &AppState, expr: &Expr, ctx: &Context) -> Expr {
     match expr {
         Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None => expr.clone(),
-        Expr::Symbol(symbol) => Expr::Symbol(resolve_symbol(symbol)),
+        Expr::Symbol(symbol) => Expr::Symbol(resolve_symbol(symbol)), // get the terminal at the end of the symbol chain.
         Expr::List(expr_list) => {
             if expr_list.is_empty() {
                 return Expr::None;

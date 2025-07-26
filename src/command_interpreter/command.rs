@@ -30,7 +30,6 @@ pub struct Command {
     pub symbol: String,
     pub description: String,
     pub eval_fn_ptr: Box<dyn Fn(&AppState, &Expr, &Context) -> Expr>,
-    // fn with trait eval and takes the args, and evaluates to a value
 }
 
 /*

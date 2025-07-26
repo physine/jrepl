@@ -16,14 +16,15 @@ pub fn interpret(app_state: &AppState, ctx: &Context, user_input: &str) -> Effec
         return Effect::from_err(InterpretErr::VerifySyntaxErr(err));
     }
 
-    let expr = parse_top(&tokens); // abstract syntax tree
+    let expr = parse_top(&tokens);
 
-    let eval_result = eval(app_state, &expr, ctx);
-    if let Err(err) = eval_result {
-        return Effect::from_err(InterpretErr::EvalErr(err));
+    let expr = eval(app_state, &expr, ctx);
+    Effect {
+        eval_value: Some(expr),
+        next_state: None,
+        user_feedback: None,
+        err: None,
     }
-
-    eval_result.unwrap()
 }
 
 #[derive(Debug, PartialEq)]
