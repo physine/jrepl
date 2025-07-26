@@ -1,22 +1,23 @@
 use crate::appstate::State;
 use crate::command_interpreter::interpreter::InterpretErr;
 
-#[derive(Debug, PartialEq)]
-pub enum EvalValue {
-    String(String),
-    Number(f64),
-    Bool(bool),
-    None, // why do I have this?
-          // fn - possible for a lambda in the furure
-}
+// #[derive(Debug, PartialEq)]
+// pub enum EvalValue {
+//     String(String),
+//     Number(f64),
+//     Bool(bool),
+//     None, // why do I have this?
+//           // fn - possible for a lambda in the furure
+// }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     // ------------ Literals/Terminals ----------
     String(String),
     Number(f64),
     Bool(bool),
     None,
+    // Operator(String),
     // Command(String),
     // File(File),
     // State(AppState)
@@ -27,7 +28,7 @@ pub enum Expr {
 
 #[derive(Debug, PartialEq)]
 pub struct Effect {
-    pub eval_value: Option<EvalValue>,
+    pub eval_value: Option<Expr>,
     pub next_state: Option<State>,
     pub user_feedback: Option<String>, // If a file is bound to a symbol with (load <file_path>) it might not have an eval_value, but the user should get feedback.
     pub err: Option<InterpretErr>,
@@ -35,9 +36,7 @@ pub struct Effect {
 }
 
 impl Effect {
-    pub fn apply(&self) -> State {
-        State { exit: false }
-    }
+    // pub fn apply(&self) -> State {}
 
     pub fn from_err(err: InterpretErr) -> Effect {
         Effect {

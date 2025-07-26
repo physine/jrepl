@@ -1,9 +1,31 @@
-use crate::Context;
 use crate::appstate::AppState;
 use crate::command_interpreter::types::Effect;
 use crate::command_interpreter::types::Expr;
+use crate::{Context, command_interpreter::command};
 
-pub fn eval(app_state: &AppState, ast: Expr, ctx: &Context) -> Result<Effect, EvalError> {}
+pub fn eval(app_state: &AppState, expr: &Expr, ctx: &Context) -> Expr {
+    match expr {
+        Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None => expr.clone(),
+        Expr::Symbol(symbol) => Expr::Symbol(resolve_symbol(symbol)),
+        Expr::List(expr_list) => {
+            if expr_list.is_empty() {
+                return Expr::None;
+            }
+            match &expr_list[0] {
+                Expr::Symbol(symbol) => {
+                    if let Some(command) = get_command_from_symbol(symbol) {
+                        command.eval(&expr_list[1..])
+                    } else {
+                        panic!("Unknown symbol found in command position: {}", symbol);
+                    }
+                }
+                other => {
+                    panic!("List does not start with Command. Found: {:?}", other);
+                }
+            }
+        }
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub enum EvalError {
@@ -17,7 +39,6 @@ pub enum EvalError {
 
 #[cfg(test)]
 mod test {
-    use crate::command_interpreter::types::EvalValue;
     use crate::statics::commands::get_commands;
 
     use super::*;
@@ -29,18 +50,9 @@ mod test {
     #[test]
     fn eval_help_ast() {
         let app_state = AppState::new();
-        let mut ctx = Context::new();
-        &ctx.set_commands(get_commands());
+        let ctx = Context::from(get_commands());
         let ast = help_cmd_ast();
 
-        assert_eq!(
-            Effect {
-                eval_value: Some(EvalValue::String("<print help string>".to_string())),
-                next_state: None,
-                user_feedback: None,
-                err: None,
-            },
-            eval(&app_state, ast, &ctx).unwrap()
-        );
+        assert_eq!(Expr::None, eval(&app_state, &ast, &ctx));
     }
 }

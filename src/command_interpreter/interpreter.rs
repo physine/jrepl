@@ -16,9 +16,9 @@ pub fn interpret(app_state: &AppState, ctx: &Context, user_input: &str) -> Effec
         return Effect::from_err(InterpretErr::VerifySyntaxErr(err));
     }
 
-    let ast = parse_top(&tokens); // abstract syntax tree
+    let expr = parse_top(&tokens); // abstract syntax tree
 
-    let eval_result = eval(app_state, ast, ctx);
+    let eval_result = eval(app_state, &expr, ctx);
     if let Err(err) = eval_result {
         return Effect::from_err(InterpretErr::EvalErr(err));
     }

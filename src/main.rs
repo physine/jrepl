@@ -23,8 +23,7 @@ fn main() {
     // let json = extract_json(&args.input_files);
 
     let mut app_state = AppState::new();
-    let mut ctx = Context::new();
-    ctx.set_commands(get_commands());
+    let mut ctx = Context::from(get_commands());
 
     loop {
         print!(">");
@@ -33,8 +32,8 @@ fn main() {
         let user_input = user_input();
         let effect = interpret(&app_state, &ctx, &user_input);
 
-        let next_state = effect.apply();
-        app_state.set_next_state(next_state);
+        // let next_state = effect.apply();
+        // app_state.set_next_state(next_state);
 
         // could cause state change (ie. create a new symbol or change the value of a symbol or undo the last undoable command ('help' isnt undoable)),
         // could also just yeald a string to be printed to the UI (ie. the held command)

@@ -24,14 +24,12 @@ Command:
 
 */
 
+use crate::{appstate::AppState, command_interpreter::types::Expr, context::context::Context};
+
 pub struct Command {
     pub symbol: String,
     pub description: String,
-    /*
-        Function pointers for:
-            eval() -> Value
-    */
-    // fn eval(&AppState, &AST) -> EvalValue,
+    pub eval_fn_ptr: Box<dyn Fn(&AppState, &Expr, &Context) -> Expr>,
     // fn with trait eval and takes the args, and evaluates to a value
 }
 
