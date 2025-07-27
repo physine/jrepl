@@ -3,13 +3,17 @@ use crate::command_interpreter::types::Effect;
 use crate::command_interpreter::types::Expr;
 use crate::{Context, command_interpreter::command};
 
-pub fn eval(app_state: &AppState, expr: &Expr, ctx: &Context) -> Expr {
+pub fn eval(app_state: &AppState, expr: &Expr, ctx: &Context) -> Result<Expr, EvalError> {
     match expr {
-        Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None => expr.clone(),
-        Expr::Symbol(symbol) => Expr::Symbol(resolve_symbol(symbol)), // get the terminal at the end of the symbol chain.
+        Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None => Ok(expr.clone()),
+        // get the terminal at the end of the symbol chain.
+        Expr::Symbol(symbol) => {
+            let expr = app_state.resolve_symbol_to_terminal(symbol)?;
+            eval(app_state, &expr, ctx)
+        }
         Expr::List(expr_list) => {
             if expr_list.is_empty() {
-                return Expr::None;
+                return Ok(Expr::None);
             }
             match &expr_list[0] {
                 Expr::Symbol(symbol) => {
@@ -53,6 +57,6 @@ mod test {
         let ctx = Context::from(get_commands());
         let ast = help_cmd_ast();
 
-        assert_eq!(Expr::None, eval(&app_state, &ast, &ctx));
+        assert_eq!(Ok(Expr::None), eval(&app_state, &ast, &ctx));
     }
 }

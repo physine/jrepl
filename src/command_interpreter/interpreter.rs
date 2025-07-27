@@ -2,10 +2,10 @@ use crate::appstate::AppState;
 use crate::command_interpreter::eval;
 use crate::command_interpreter::eval::EvalError;
 use crate::command_interpreter::lexer;
-use crate::command_interpreter::parser::parse_top;
-use crate::command_interpreter::syntax_validation::SyntaxError;
-use crate::command_interpreter::syntax_validation::verify_syntax;
+use crate::command_interpreter::parser::parse;
 use crate::command_interpreter::types::Effect;
+use crate::command_interpreter::validation::SyntaxError;
+use crate::command_interpreter::validation::verify_syntax;
 use crate::context::context::Context;
 
 pub fn interpret(app_state: &AppState, ctx: &Context, user_input: &str) -> Effect {
@@ -16,9 +16,13 @@ pub fn interpret(app_state: &AppState, ctx: &Context, user_input: &str) -> Effec
         return Effect::from_err(InterpretErr::VerifySyntaxErr(err));
     }
 
-    let expr = parse_top(&tokens);
+    let expr = parse(&tokens);
 
-    let expr = eval(app_state, &expr, ctx);
+    let expr = match eval(app_state, &expr, ctx) {
+        Ok(expr) => expr,
+        Err(err) => return Effect::from_err(InterpretErr::EvalErr(err)),
+    };
+
     Effect {
         eval_value: Some(expr),
         next_state: None,

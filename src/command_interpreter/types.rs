@@ -26,7 +26,7 @@ pub enum Expr {
     List(Vec<Expr>), // e.g. (add 1 2)
 }
 
-#[derive(Debug, PartialEq)]
+// #[derive(Debug, PartialEq)]
 pub struct Effect {
     pub eval_value: Option<Expr>,
     pub next_state: Option<State>,

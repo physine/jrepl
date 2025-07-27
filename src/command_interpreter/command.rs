@@ -26,6 +26,7 @@ Command:
 
 use crate::{appstate::AppState, command_interpreter::types::Expr, context::context::Context};
 
+// #[derive(Debug)]
 pub struct Command {
     pub symbol: String,
     pub description: String,

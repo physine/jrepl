@@ -1,9 +1,9 @@
-use crate::command_interpreter::types::Expr;
-use std::collections::HashMap;
+use crate::command_interpreter::{command::Command, eval::EvalError, types::Expr};
+use std::{collections::HashMap, fmt::format};
 
 // -------------------------------- AppState -------------------------------- //
 
-#[derive(Debug, PartialEq)]
+// #[derive(Debug, PartialEq)]
 pub struct AppState {
     state_timeline: Vec<State>,
     current_state: usize,
@@ -31,9 +31,15 @@ impl AppState {
     //     self.state_timeline.get(self.current_state).unwrap().to_owned()
     // }
 
-    pub fn resolve_symbol(&self, symbol: &str) -> Option<Expr> {
-        // self.commands.get(index)
-        Some(Expr::None)
+    pub fn resolve_symbol_to_terminal(&self, symbol: &str) -> Result<Expr, EvalError> {
+        // TODO: Will need to create a symbol table and loop up symbols in it
+        let commands = &self.state_timeline.get(self.current_state).unwrap().commands;
+        for command in commands {
+            if command.symbol == symbol {
+                return Ok(command.symbol.to_string());
+            }
+        }
+        return Err(EvalError::UndefinedSymbol(format!("Undefined symbol: {symbol}")));
     }
 
     pub fn register_command_symbols() {}
@@ -45,7 +51,7 @@ impl AppState {
 
 // -------------------------------- State -------------------------------- //
 
-#[derive(Clone, Debug, PartialEq)]
+// #[derive(Clone, Debug, PartialEq)]
 pub struct State {
     // open_input_files: Vec<File>,
     // pub symbol_table: Map<String, >
@@ -54,6 +60,7 @@ pub struct State {
     editor: Editor,
     symbol_table: HashMap<String, Expr>,
     exit: bool,
+    commands: Vec<Command>,
 }
 
 // TODO: register Commands symbols with AppState
@@ -68,6 +75,7 @@ impl State {
             },
             symbol_table: HashMap::new(),
             exit: false,
+            commands: Vec::new(),
         }
     }
 }

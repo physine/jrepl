@@ -5,9 +5,14 @@ pub fn verify_syntax(tokens: &[String]) -> Result<bool, SyntaxError> {
     Ok(true)
 }
 
+// pub fn verify_symbols() -> Result<bool, SyntaxError> {
+//     Ok(true)
+// }
+
 #[derive(Debug, PartialEq)]
 pub enum SyntaxError {
     InvalidSyntax(String),
+    InvalidSymbol(String),
     // UnbalancedParentheses(String),
     // ... add more as needed
     // Custom(String),
