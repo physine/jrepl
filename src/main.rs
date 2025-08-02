@@ -2,9 +2,6 @@ use std::io::Write;
 
 use clap::Parser;
 
-mod context;
-use context::context::Context;
-
 mod appstate;
 
 mod io;
@@ -22,15 +19,18 @@ fn main() {
     let args = Args::parse();
     // let json = extract_json(&args.input_files);
 
+    let commands = get_commands();
+    // let mut ctx = Context::from(&commands);
+
     let mut app_state = AppState::new();
-    let mut ctx = Context::from(get_commands());
+    app_state.set_commands(commands);
 
     loop {
         print!(">");
         std::io::stdout().flush().expect("Error flushing stdout");
 
         let user_input = user_input();
-        let effect = interpret(&app_state, &ctx, &user_input);
+        let effect = interpret(&app_state, &user_input);
 
         // let next_state = effect.apply();
         // app_state.set_next_state(next_state);

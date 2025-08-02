@@ -24,13 +24,16 @@ Command:
 
 */
 
-use crate::{appstate::AppState, command_interpreter::types::Expr, context::context::Context};
+use crate::{
+    appstate::AppState,
+    command_interpreter::{eval::EvalError, types::Expr},
+};
 
-// #[derive(Debug)]
+// #[derive(Clone)]
 pub struct Command {
     pub symbol: String,
     pub description: String,
-    pub eval_fn_ptr: Box<dyn Fn(&AppState, &Expr, &Context) -> Expr>,
+    pub eval_fn_ptr: Box<dyn Fn(&AppState, &[Expr]) -> Result<Expr, EvalError>>,
 }
 
 /*

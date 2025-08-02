@@ -1,5 +1,13 @@
-use crate::appstate::State;
+use std::rc::Rc;
+
 use crate::command_interpreter::interpreter::InterpretErr;
+use crate::{appstate::State, command_interpreter::command::Command};
+
+// #[derive(Debug)]
+pub enum Referent {
+    Command(Rc<Command>),
+    Expr(Expr),
+}
 
 // #[derive(Debug, PartialEq)]
 // pub enum EvalValue {

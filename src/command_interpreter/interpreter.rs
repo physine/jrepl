@@ -6,9 +6,8 @@ use crate::command_interpreter::parser::parse;
 use crate::command_interpreter::types::Effect;
 use crate::command_interpreter::validation::SyntaxError;
 use crate::command_interpreter::validation::verify_syntax;
-use crate::context::context::Context;
 
-pub fn interpret(app_state: &AppState, ctx: &Context, user_input: &str) -> Effect {
+pub fn interpret(app_state: &AppState, user_input: &str) -> Effect {
     let tokens = lexer(user_input);
 
     let verify_syntax_result = verify_syntax(&tokens);
@@ -18,7 +17,7 @@ pub fn interpret(app_state: &AppState, ctx: &Context, user_input: &str) -> Effec
 
     let expr = parse(&tokens);
 
-    let expr = match eval(app_state, &expr, ctx) {
+    let expr = match eval(app_state, &expr) {
         Ok(expr) => expr,
         Err(err) => return Effect::from_err(InterpretErr::EvalErr(err)),
     };

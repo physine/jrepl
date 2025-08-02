@@ -1,15 +1,14 @@
 use crate::appstate::AppState;
-use crate::command_interpreter::types::Effect;
 use crate::command_interpreter::types::Expr;
-use crate::{Context, command_interpreter::command};
 
-pub fn eval(app_state: &AppState, expr: &Expr, ctx: &Context) -> Result<Expr, EvalError> {
+pub fn eval(app_state: &AppState, expr: &Expr) -> Result<Expr, EvalError> {
     match expr {
         Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None => Ok(expr.clone()),
         // get the terminal at the end of the symbol chain.
         Expr::Symbol(symbol) => {
+            // this will never be a command which is bound to a symbol because those symbols are only found at the start of lists, which matches the case below
             let expr = app_state.resolve_symbol_to_terminal(symbol)?;
-            eval(app_state, &expr, ctx)
+            Ok(expr)
         }
         Expr::List(expr_list) => {
             if expr_list.is_empty() {
@@ -17,11 +16,8 @@ pub fn eval(app_state: &AppState, expr: &Expr, ctx: &Context) -> Result<Expr, Ev
             }
             match &expr_list[0] {
                 Expr::Symbol(symbol) => {
-                    if let Some(command) = get_command_from_symbol(symbol) {
-                        command.eval(&expr_list[1..])
-                    } else {
-                        panic!("Unknown symbol found in command position: {}", symbol);
-                    }
+                    let command = app_state.get_command_from_symbol(symbol)?;
+                    (command.eval_fn_ptr)(app_state, &expr_list[1..])
                 }
                 other => {
                     panic!("List does not start with Command. Found: {:?}", other);
@@ -53,10 +49,13 @@ mod test {
 
     #[test]
     fn eval_help_ast() {
-        let app_state = AppState::new();
-        let ctx = Context::from(get_commands());
+        let mut app_state = AppState::new();
+        app_state.set_commands(get_commands());
         let ast = help_cmd_ast();
 
-        assert_eq!(Ok(Expr::None), eval(&app_state, &ast, &ctx));
+        assert_eq!(
+            Ok(Expr::String("<help command info>".to_string())),
+            eval(&app_state, &ast)
+        );
     }
 }

@@ -1,7 +1,6 @@
 use crate::appstate::AppState;
 use crate::command_interpreter::command::Command;
 use crate::command_interpreter::types::Expr;
-use crate::context::context::Context;
 
 pub fn get_commands() -> Vec<Command> {
     vec![
@@ -9,9 +8,9 @@ pub fn get_commands() -> Vec<Command> {
             symbol: "help".into(),
             description: "".into(),
             // param_format: "",
-            eval_fn_ptr: Box::new(|state: &AppState, expr: &Expr, ctx: &Context| {
-                println!("eval_fn_ptr help command");
-                Expr::None
+            eval_fn_ptr: Box::new(|state: &AppState, expr: &[Expr]| {
+                println!("Hi from help Command :)");
+                Ok(Expr::String("<help command info>".to_string()))
             }),
         },
         // Command {

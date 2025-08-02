@@ -50,17 +50,9 @@ fn parse_case(token: &str) -> Expr {
 
 #[cfg(test)]
 mod test {
-    use crate::context::context::Context;
     use crate::statics::commands::get_commands;
 
     use super::*;
-
-    fn ctx() -> Context {
-        let mut ctx = Context::new();
-        let commands = get_commands();
-        ctx.set_commands(commands);
-        ctx
-    }
 
     #[test]
     fn parse_empty_expression() {
