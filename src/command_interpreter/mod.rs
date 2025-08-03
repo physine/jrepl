@@ -1,2 +1,10 @@
+pub mod command;
+pub mod eval;
 pub mod interpreter;
-pub mod interpreter_parts;
+pub mod lexer;
+pub mod parser;
+pub mod types;
+pub mod validation;
+
+use eval::eval;
+use lexer::lexer;

@@ -1,6 +1,14 @@
+Commands can be defined by a 3 tuple:
+
+1. symbol name
+2. side effect (state change)
+3. return value (return string, in the case of 'help' command)
+
+---
+
 Lexer(user_input) -> tokens
 Parser(tokens) -> AST
-Evaluation(AST) -> [some state change]
+Evaluation(AST) -> Effect
 
 ---
 

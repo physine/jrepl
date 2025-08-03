@@ -21,9 +21,10 @@ pub fn extract_json(file_paths: &[String]) -> Vec<Value> {
         .collect()
 }
 
-// pub fn open_file(file_path: &str) -> File {
-//     File::open(file_path).unwrap_or_else(|err| {
-//         eprintln!("Error opening file: '{}': {}", file_path, err);
-//         process::exit(1)
-//     })
-// }
+pub fn user_input() -> String {
+    let mut input = String::new();
+    std::io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line");
+    input.trim().to_owned()
+}
