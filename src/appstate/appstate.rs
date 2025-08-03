@@ -22,6 +22,8 @@ impl AppState {
         }
     }
 
+    // pub fn state_builder(&self) -> StateBuilder {}
+
     pub fn get_current_state(&self) -> &State {
         self.state_timeline.get(self.current_state).unwrap()
     }
@@ -60,12 +62,13 @@ impl AppState {
 
     pub fn get_command_from_symbol(&self, symbol: &str) -> Result<&Command, EvalError> {
         let symbol_table = &self.state_timeline.get(self.current_state).unwrap().symbol_table;
-        println!("|------------------------------------------------|");
-        for (k, v) in symbol_table.iter() {
-            println!("key: {:?}, value address: {:p}", k, v);
-        }
+        // println!("|------------------------------------------------|");
+        // for (k, v) in symbol_table.iter() {
+        //     println!("key: {:?}, value address: {:p}", k, v);
+        // }
         if symbol_table.is_empty() {
-            println!("symbol_table is empty");
+            // TODO: create a specific error enum for this error insted of just using UndefinedSymbol
+            return Err(EvalError::UndefinedSymbol(format!("symbol_table is empty. 0.1")));
         }
 
         let referent_option = symbol_table.get(symbol);
@@ -92,6 +95,10 @@ impl AppState {
         let commands: Vec<Rc<Command>> = commands.into_iter().map(Rc::new).collect();
         self.state_timeline.get_mut(self.current_state).unwrap().commands = commands;
         self.register_commands_with_symbol_table();
+    }
+
+    pub fn get_commands(&self) -> &Vec<Rc<Command>> {
+        &self.state_timeline.get(self.current_state).unwrap().commands
     }
 
     fn register_commands_with_symbol_table(&mut self) {

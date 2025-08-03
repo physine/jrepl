@@ -26,14 +26,23 @@ Command:
 
 use crate::{
     appstate::AppState,
-    command_interpreter::{eval::EvalError, types::Expr},
+    command_interpreter::{
+        eval::EvalError,
+        types::{Effect, Expr},
+    },
 };
 
 // #[derive(Clone)]
 pub struct Command {
     pub symbol: String,
     pub description: String,
-    pub eval_fn_ptr: Box<dyn Fn(&AppState, &[Expr]) -> Result<Expr, EvalError>>,
+    pub eval_fn_ptr: Box<dyn Fn(&AppState, &[Expr]) -> Result<Effect, EvalError>>,
+}
+
+impl Command {
+    pub fn get_description(&self) -> &str {
+        &self.description
+    }
 }
 
 /*

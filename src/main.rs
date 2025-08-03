@@ -2,15 +2,14 @@ use std::io::Write;
 
 use clap::Parser;
 
-mod appstate;
-
 mod io;
 use io::read::user_input;
 
 mod command_interpreter;
 use command_interpreter::interpreter::interpret;
 
-use crate::appstate::AppState;
+mod appstate;
+use crate::{appstate::AppState, command_interpreter::types::Expr};
 
 mod statics;
 use statics::commands::get_commands;
@@ -31,6 +30,14 @@ fn main() {
 
         let user_input = user_input();
         let effect = interpret(&app_state, &user_input);
+
+        if let Some(expr) = effect.eval_value {
+            if let Expr::String(data) = expr {
+                println!("{data}");
+            }
+        }
+
+        // app_state.set_next_state(state);
 
         // let next_state = effect.apply();
         // app_state.set_next_state(next_state);

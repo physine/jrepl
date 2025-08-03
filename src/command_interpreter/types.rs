@@ -46,6 +46,15 @@ pub struct Effect {
 impl Effect {
     // pub fn apply(&self) -> State {}
 
+    pub fn from_eval_value(expr: Expr) -> Effect {
+        Effect {
+            eval_value: Some(expr),
+            next_state: None,
+            user_feedback: None,
+            err: None,
+        }
+    }
+
     pub fn from_err(err: InterpretErr) -> Effect {
         Effect {
             eval_value: None,
