@@ -1,12 +1,14 @@
-use crate::command_interpreter::command::Command;
+use clap::builder;
+
 use crate::command_interpreter::types::Expr;
 use crate::{appstate::AppState, command_interpreter::types::Effect};
+use crate::{appstate::State, command_interpreter::command::Command};
 
 pub fn get_commands() -> Vec<Command> {
     vec![
         Command {
-            symbol: "help".into(),
-            description: "help — display the avalible options. Usage: (<help> [arguments])".into(),
+            symbol: "help".to_string(),
+            description: "help — display avalible options. Usage: (help)".to_string(),
             eval_fn_ptr: Box::new(|app_state: &AppState, expr: &[Expr]| {
                 let help_msg = format!(
                     "\n{}\n",
@@ -20,15 +22,21 @@ pub fn get_commands() -> Vec<Command> {
                 Ok(Effect::from_eval_value(Expr::String(help_msg)))
             }),
         },
-        // Command {
-        //     symbol: "exit".into(),
-        //     description: "exit — exit the interpreter. Usage: (exit)".into(),
-        //     // param_format: "",
-        //     eval_fn_ptr: Box::new(|app_state: &AppState, expr: &[Expr]| {
-        //         app_state.state_builder();
-        //         Ok(Effect::from_eval_value(Expr::None))
-        //     }),
-        // },
+        Command {
+            symbol: "exit".to_string(),
+            description: "exit — exit the interpreter. Usage: (exit)".to_string(),
+            eval_fn_ptr: Box::new(|app_state: &AppState, expr: &[Expr]| {
+                let next_state = app_state.apply_action(|state| {
+                    state.exit = true;
+                });
+                Ok(Effect {
+                    eval_value: None,
+                    next_state: Some(next_state),
+                    user_feedback: None,
+                    err: None,
+                })
+            }),
+        },
         // Command {
         //     symbol: "search".into(),
         //     description: "".into(),

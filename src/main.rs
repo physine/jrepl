@@ -9,7 +9,10 @@ mod command_interpreter;
 use command_interpreter::interpreter::interpret;
 
 mod appstate;
-use crate::{appstate::AppState, command_interpreter::types::Expr};
+use crate::{
+    appstate::AppState,
+    command_interpreter::types::{Effect, Expr},
+};
 
 mod statics;
 use statics::commands::get_commands;
@@ -18,11 +21,8 @@ fn main() {
     let args = Args::parse();
     // let json = extract_json(&args.input_files);
 
-    let commands = get_commands();
-    // let mut ctx = Context::from(&commands);
-
     let mut app_state = AppState::new();
-    app_state.set_commands(commands);
+    app_state.set_commands(get_commands());
 
     loop {
         print!(">");
@@ -31,10 +31,10 @@ fn main() {
         let user_input = user_input();
         let effect = interpret(&app_state, &user_input);
 
-        if let Some(expr) = effect.eval_value {
-            if let Expr::String(data) = expr {
-                println!("{data}");
-            }
+        print_effect(&effect);
+
+        if let Some(state) = effect.next_state {
+            app_state.set_next_state(state);
         }
 
         // app_state.set_next_state(state);
@@ -49,13 +49,45 @@ fn main() {
 
         // update UI based on changed state
 
-        if user_input == "q" {
+        if app_state.should_exit() {
             break;
         }
 
-        // if app_state.should_exit() {
+        // if user_input == "q" {
         //     break;
         // }
+    }
+}
+
+pub fn print_effect(effect: &Effect) {
+    if let Some(eval_value) = &effect.eval_value {
+        println!("----------------------------------");
+        println!("Evaluated value: {:?}", eval_value);
+    }
+    if let Some(next_state) = &effect.next_state {
+        println!("----------------------------------");
+        println!(
+            "Next state: [state with {} commands, exit={}]",
+            next_state.commands_len(),
+            next_state.get_exit(),
+        );
+    }
+    if let Some(feedback) = &effect.user_feedback {
+        println!("----------------------------------");
+        println!("User feedback: {}", feedback);
+    }
+    if let Some(err) = &effect.err {
+        println!("----------------------------------");
+        println!("Error: {:?}", err);
+    }
+    // If nothing was Some, print that it's empty
+    if effect.eval_value.is_none()
+        && effect.next_state.is_none()
+        && effect.user_feedback.is_none()
+        && effect.err.is_none()
+    {
+        println!("----------------------------------");
+        println!("Effect: empty (no value, feedback, state, or error)");
     }
 }
 

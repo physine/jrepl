@@ -32,7 +32,6 @@ use crate::{
     },
 };
 
-// #[derive(Clone)]
 pub struct Command {
     pub symbol: String,
     pub description: String,

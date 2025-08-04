@@ -17,12 +17,10 @@ pub fn interpret(app_state: &AppState, user_input: &str) -> Effect {
 
     let expr = parse(&tokens);
 
-    let effect = match eval(app_state, &expr) {
-        Ok(effect) => effect,
+    match eval(app_state, &expr) {
+        Ok(effect) => return effect,
         Err(err) => return Effect::from_err(InterpretErr::EvalErr(err)),
     };
-
-    effect
 }
 
 #[derive(Debug, PartialEq)]
