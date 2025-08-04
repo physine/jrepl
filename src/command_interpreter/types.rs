@@ -3,7 +3,7 @@ use std::rc::Rc;
 use crate::command_interpreter::interpreter::InterpretErr;
 use crate::{appstate::State, command_interpreter::command::Command};
 
-// #[derive(Debug)]
+#[derive(Clone)]
 pub enum Referent {
     Command(Rc<Command>),
     Expr(Expr),
@@ -44,8 +44,6 @@ pub struct Effect {
 }
 
 impl Effect {
-    // pub fn apply(&self) -> State {}
-
     pub fn from_eval_value(expr: Expr) -> Effect {
         Effect {
             eval_value: Some(expr),
