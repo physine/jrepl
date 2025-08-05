@@ -60,6 +60,18 @@ mod test {
     }
 
     #[test]
+    fn parse_string_literal() {
+        assert_eq!(
+            parse(&vec![
+                "(".to_string(),
+                "\"i_am_a_string_literal\"".to_string(),
+                ")".to_string()
+            ]),
+            Expr::List(vec![Expr::Symbol("help".to_string())])
+        );
+    }
+
+    #[test]
     fn parse_help_command() {
         assert_eq!(
             parse(&vec!["(".to_string(), "help".to_string(), ")".to_string()]),

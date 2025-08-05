@@ -45,25 +45,40 @@ mod test {
     use super::*;
 
     #[test]
+    fn lexer_expr_string_literal() {
+        assert_eq!(
+            lexer("()"),
+            vec![
+                "(".to_string(),
+                "\"i_am_a_string_literal\"".to_string(),
+                ")".to_string()
+            ]
+        );
+    }
+
+    #[test]
     fn lexer_empty_command() {
-        assert_eq!(lexer("()"), vec!["(".to_owned(), ")".to_owned()]);
+        assert_eq!(lexer("()"), vec!["(".to_string(), ")".to_string()]);
     }
 
     #[test]
     fn lexer_help_command() {
-        assert_eq!(lexer("(help)"), vec!["(".to_owned(), "help".to_owned(), ")".to_owned()]);
+        assert_eq!(
+            lexer("(help)"),
+            vec!["(".to_string(), "help".to_string(), ")".to_string()]
+        );
     }
 
     #[test]
     fn lexer_white_space_in_command_allowed() {
         assert_eq!(
             lexer("( help   )"),
-            vec!["(".to_owned(), "help".to_owned(), ")".to_owned()]
+            vec!["(".to_string(), "help".to_string(), ")".to_string()]
         );
 
         assert_eq!(
             lexer(" ( help   ) "),
-            vec!["(".to_owned(), "help".to_owned(), ")".to_owned()]
+            vec!["(".to_string(), "help".to_string(), ")".to_string()]
         );
     }
 
@@ -72,11 +87,11 @@ mod test {
         assert_eq!(
             lexer("(add 123 foo456)"),
             vec![
-                "(".to_owned(),
-                "add".to_owned(),
-                "123".to_owned(),
-                "foo456".to_owned(),
-                ")".to_owned()
+                "(".to_string(),
+                "add".to_string(),
+                "123".to_string(),
+                "foo456".to_string(),
+                ")".to_string()
             ]
         );
     }
@@ -86,15 +101,15 @@ mod test {
         assert_eq!(
             lexer("(+ 1 (* 2 3))"),
             vec![
-                "(".to_owned(),
-                "+".to_owned(),
-                "1".to_owned(),
-                "(".to_owned(),
-                "*".to_owned(),
-                "2".to_owned(),
-                "3".to_owned(),
-                ")".to_owned(),
-                ")".to_owned()
+                "(".to_string(),
+                "+".to_string(),
+                "1".to_string(),
+                "(".to_string(),
+                "*".to_string(),
+                "2".to_string(),
+                "3".to_string(),
+                ")".to_string(),
+                ")".to_string()
             ]
         );
     }
@@ -104,11 +119,11 @@ mod test {
         assert_eq!(
             lexer(" (   add    1    2  ) "),
             vec![
-                "(".to_owned(),
-                "add".to_owned(),
-                "1".to_owned(),
-                "2".to_owned(),
-                ")".to_owned()
+                "(".to_string(),
+                "add".to_string(),
+                "1".to_string(),
+                "2".to_string(),
+                ")".to_string()
             ]
         );
     }
@@ -118,12 +133,12 @@ mod test {
         assert_eq!(
             lexer("(help)(quit)"),
             vec![
-                "(".to_owned(),
-                "help".to_owned(),
-                ")".to_owned(),
-                "(".to_owned(),
-                "quit".to_owned(),
-                ")".to_owned()
+                "(".to_string(),
+                "help".to_string(),
+                ")".to_string(),
+                "(".to_string(),
+                "quit".to_string(),
+                ")".to_string()
             ]
         );
     }
@@ -133,12 +148,12 @@ mod test {
         assert_eq!(
             lexer("(search file1 file2 file3)"),
             vec![
-                "(".to_owned(),
-                "search".to_owned(),
-                "file1".to_owned(),
-                "file2".to_owned(),
-                "file3".to_owned(),
-                ")".to_owned()
+                "(".to_string(),
+                "search".to_string(),
+                "file1".to_string(),
+                "file2".to_string(),
+                "file3".to_string(),
+                ")".to_string()
             ]
         );
     }
@@ -148,11 +163,11 @@ mod test {
         assert_eq!(
             lexer("(+ 1 2)"),
             vec![
-                "(".to_owned(),
-                "+".to_owned(),
-                "1".to_owned(),
-                "2".to_owned(),
-                ")".to_owned()
+                "(".to_string(),
+                "+".to_string(),
+                "1".to_string(),
+                "2".to_string(),
+                ")".to_string()
             ]
         );
     }
@@ -162,11 +177,11 @@ mod test {
         assert_eq!(
             lexer("(search \"target(-t)ext\" filename)"),
             vec![
-                "(".to_owned(),
-                "search".to_owned(),
-                "\"target(-t)ext\"".to_owned(),
-                "filename".to_owned(),
-                ")".to_owned()
+                "(".to_string(),
+                "search".to_string(),
+                "\"target(-t)ext\"".to_string(),
+                "filename".to_string(),
+                ")".to_string()
             ]
         );
     }
