@@ -3,17 +3,15 @@
     Check for balanced:
         ()      parens
         ""      quotes
-        /**/    comment
-        //      comment
+        ``      comment
 
 
     contexts (current_context):
-        - in_singe_line_comment
-        - in_multi_line_comment
+        - in_comment
         - in_string
-        - in_list_operator_position
-        - in_list_param_position
-        - default/text
+        - in_list
+        - in_list
+        - init
 
     initial context:
         default
@@ -35,16 +33,7 @@
 
 */
 
-use std::collections::VecDeque;
-
-enum Delimiter {
-    open_paren,
-    close_paren,
-    double_quote,
-    forward_slash,
-    back_slash,
-    asterisk,
-}
+enum Delimiter {}
 
 impl Delimiter {
     pub fn is(token: &str) -> bool {
@@ -55,19 +44,13 @@ impl Delimiter {
 #[derive(Debug, Clone)]
 enum Context {
     Init,
-    Default,
-    Single_line_comment,
-    Multi_line_comment,
-    String,
-    Ls_cmd_pos,
-    Ls_param_pos,
-    Ls_after_cmd_pos,
+    List,
 }
 
 #[derive(Debug)]
 struct Accumulator {
     context_stack: Vec<Context>,
-    token_history: VecDeque<String>,
+    token_history: Vec<String>,
     delimiter_stack: Vec<String>,
     // err // TODO: add an err fields as early exit is not possible with fold.
 }
@@ -75,18 +58,10 @@ struct Accumulator {
 impl Accumulator {
     fn new() -> Accumulator {
         Accumulator {
-            context_stack: vec![],
-            token_history: VecDeque::new(),
+            context_stack: Vec::new(),
+            token_history: Vec::new(),
             delimiter_stack: Vec::new(), // is there a better data structor?
         }
-    }
-
-    fn context_stack_push(&mut self, context: Context) {
-        self.context_stack.push(context);
-    }
-
-    fn context_stack_pop(&mut self) {
-        self.context_stack.pop();
     }
 
     fn context_stack_peek(&self) -> Context {
@@ -95,58 +70,79 @@ impl Accumulator {
         }
         self.context_stack.get(self.context_stack.len() - 1).unwrap().clone()
     }
-
-    fn delimiter_stack_pop(&mut self) {
-        self.delimiter_stack.pop();
-    }
 }
 
-fn transition_table(mut acc: Accumulator, token: &str) -> Accumulator {
+fn transition_table(mut acc: Accumulator, token: &str) -> Result<Accumulator, SyntaxError> {
     match acc.context_stack_peek() {
         Context::Init => match token {
             "(" => {
-                acc.context_stack_push(Context::Ls_cmd_pos);
-                acc.token_history.push_front(token.to_string());
+                // acc.context_stack_push(Context::List);
+                acc.context_stack.push(Context::List);
+                acc.token_history.push(token.to_string());
                 acc.delimiter_stack.push(token.to_string());
-                return acc;
-            }
-            _ => panic!("Context::default - unrecognized token: {}", token),
-        },
-        // For the moment assume its a symbol if its not a Delimiter.
-        // It should also accept literals in place of the ls_cmd_pos, as literals can be evaluated to themselves.
-        Context::Ls_cmd_pos => {
-            if !Delimiter::is(token) {
-                acc.context_stack_push(Context::Ls_after_cmd_pos);
-                acc.token_history.push_front(token.to_string());
-                return acc;
+                return Ok(acc);
             }
 
-            match token {
-                ")" => {
-                    acc.context_stack_pop();
-                    acc.delimiter_stack_pop();
-                    return acc;
-                }
-                _ => {
-                    panic!("Context::ls_op_pos - unrecognized token: {}", token);
-                }
+            _ => Err(SyntaxError::InvalidSyntax(
+                "Context::Init - found token at start of expr which isnt a '(', token: {symbol}".to_string(),
+            )),
+        },
+        // For the moment assume its a symbol if its not a Delimiter, a literal would be acceptable and not a symbol and not a Deliminiter.
+        // It should also accept literals, as literals can be evaluated to themselves. Thus, ("string literal") or (4) is possible.
+        Context::List => match token {
+            "(" => {
+                acc.context_stack.push(Context::List);
+                acc.token_history.push(token.to_string());
+                acc.delimiter_stack.push(token.to_string());
+                return Ok(acc);
             }
-        }
-        _ => acc,
+
+            ")" => {
+                acc.token_history.push(token.to_string());
+                acc.context_stack.pop();
+                acc.delimiter_stack.pop();
+                return Ok(acc);
+            }
+
+            // this needs to exclude comments
+            symbol if !Delimiter::is(token) => {
+                acc.token_history.push(symbol.to_string());
+                return Ok(acc);
+            }
+
+            // comment if isComment(token) => {
+            //     // acc.context_stack.push(Context::Comment);
+            //     acc.token_history.push(token.to_string());
+            //     return Ok(acc);
+            // }
+            _ => Err(SyntaxError::InvalidSymbol(
+                "Context::List - found token in list which isnt a '(', ')' or a symbol: {token}".to_string(),
+            )),
+        },
+
+        _ => Ok(acc),
     }
 }
 
 pub fn verify_syntax(tokens: &[String]) -> Result<(), SyntaxError> {
     let acc = tokens
         .iter()
-        .fold(Accumulator::new(), |acc, token| transition_table(acc, token));
+        .try_fold(Accumulator::new(), |acc, token| transition_table(acc, token));
 
-    if acc.delimiter_stack.is_empty() {
-        return Ok(());
+    if let Err(err) = acc {
+        return Err(err);
     }
-    Err(SyntaxError::InvalidSyntax(
-        "Unbalanced delimiters at end of input".to_string(),
-    ))
+
+    if let Ok(acc) = acc {
+        if !acc.delimiter_stack.is_empty() {
+            println!("acc.delimiter_stack: {:?}", acc.delimiter_stack);
+            return Err(SyntaxError::InvalidSyntax(
+                "Unbalanced delimiters in user input".to_string(),
+            ));
+        }
+    }
+
+    Ok(())
 }
 #[derive(Debug, PartialEq)]
 pub enum SyntaxError {
@@ -161,12 +157,6 @@ mod test {
     #[test]
     fn verify_exit_command() {
         let result = verify_syntax(&vec!["(".to_string(), "exit".to_string(), ")".to_string()]);
-        assert_eq!(Ok(()), result);
-    }
-
-    #[test]
-    fn verify_help_command() {
-        let result = verify_syntax(&vec!["(".to_string(), "help".to_string(), ")".to_string()]);
         assert_eq!(Ok(()), result);
     }
 
@@ -200,18 +190,7 @@ mod test {
         assert_eq!(Ok(()), result);
     }
 
-    #[test]
-    fn verify_multiple_exprs() {
-        let result = verify_syntax(&vec![
-            "(".to_string(),
-            "first".to_string(),
-            ")".to_string(),
-            "(".to_string(),
-            "second".to_string(),
-            ")".to_string(),
-        ]);
-        assert_eq!(Ok(()), result);
-    }
+    // Error cases
 
     #[test]
     fn verify_unbalanced_open() {
@@ -226,54 +205,78 @@ mod test {
     }
 
     #[test]
-    fn verify_with_comment() {
+    fn verify_extra_close() {
         let result = verify_syntax(&vec![
             "(".to_string(),
-            "exit".to_string(),
-            "//".to_string(),
-            "this".to_string(),
-            "is".to_string(),
-            "a".to_string(),
-            "comment".to_string(),
+            "foo".to_string(),
             ")".to_string(),
-        ]);
-        assert_eq!(Ok(()), result);
-    }
-
-    #[test]
-    fn verify_with_multiline_comment() {
-        let result = verify_syntax(&vec![
-            "(".to_string(),
-            "exit".to_string(),
-            "/*".to_string(),
-            "multi".to_string(),
-            "line".to_string(),
-            "comment".to_string(),
-            "*/".to_string(),
-            ")".to_string(),
-        ]);
-        assert_eq!(Ok(()), result);
-    }
-
-    #[test]
-    fn verify_only_comment() {
-        let result = verify_syntax(&vec![
-            "//".to_string(),
-            "full".to_string(),
-            "line".to_string(),
-            "comment".to_string(),
-        ]);
-        assert_eq!(Ok(()), result);
-    }
-
-    #[test]
-    fn verify_unclosed_string() {
-        let result = verify_syntax(&vec![
-            "(".to_string(),
-            "print".to_string(),
-            "\"unclosed_string".to_string(),
             ")".to_string(),
         ]);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn verify_unbalanced_nested() {
+        let result = verify_syntax(&vec![
+            "(".to_string(),
+            "outer".to_string(),
+            "(".to_string(),
+            "inner".to_string(),
+            ")".to_string(),
+            // Missing outer ")"
+        ]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn verify_invalid_symbol() {
+        let result = verify_syntax(&vec!["$not_a_symbol".to_string()]);
+        assert!(result.is_err());
+    }
+
+    // ---- Comment edge cases ----
+
+    #[test]
+    fn verify_backtick_comment_inside_expr() {
+        let result = verify_syntax(&vec![
+            "(".to_string(),
+            "foo".to_string(),
+            "`this is a comment`".to_string(),
+            "bar".to_string(),
+            ")".to_string(),
+        ]);
+        assert_eq!(Ok(()), result);
+    }
+
+    #[test]
+    fn verify_backtick_multiline_comment_inside_expr() {
+        let result = verify_syntax(&vec![
+            "(".to_string(),
+            "foo".to_string(),
+            "`this is\na multiline\ncomment`".to_string(),
+            "bar".to_string(),
+            ")".to_string(),
+        ]);
+        assert_eq!(Ok(()), result);
+    }
+
+    #[test]
+    fn verify_comment_only_expr() {
+        let result = verify_syntax(&vec!["(".to_string(), "`just a comment`".to_string(), ")".to_string()]);
+        assert_eq!(Ok(()), result);
+    }
+
+    #[test]
+    fn verify_comment_at_start_middle_end() {
+        let result = verify_syntax(&vec![
+            "(".to_string(),
+            "`start`".to_string(),
+            "foo".to_string(),
+            "`middle`".to_string(),
+            "bar".to_string(),
+            "`end`".to_string(),
+            ")".to_string(),
+        ]);
+        assert_eq!(Ok(()), result);
     }
 }

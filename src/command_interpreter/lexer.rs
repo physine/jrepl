@@ -1,4 +1,4 @@
-pub fn lexer(user_input: &str) -> Vec<String> {
+pub fn lexer(user_input: &str) -> Result<Vec<String>, LexerErr> {
     let mut tokens = Vec::new();
     let mut chars = user_input.chars().peekable();
 
@@ -12,11 +12,36 @@ pub fn lexer(user_input: &str) -> Vec<String> {
                 // quoted string (including quotes in token)
                 let mut s = String::new();
                 s.push(chars.next().unwrap()); // opening quote
+                let mut terminated = false;
                 while let Some(&next_ch) = chars.peek() {
-                    s.push(chars.next().unwrap());
-                    if next_ch == '"' {
+                    let next = chars.next().unwrap();
+                    s.push(next);
+                    if next == '"' {
+                        terminated = true;
                         break;
                     }
+                }
+                if !terminated {
+                    return Err(LexerErr::LexErr("Unterminated string literal".to_string()));
+                }
+                tokens.push(s);
+            }
+            '`' => {
+                // backtick comment (including backticks in token)
+                let mut s = String::new();
+                s.push(chars.next().unwrap()); // opening backtick
+
+                let mut terminated = false;
+                while let Some(&next_ch) = chars.peek() {
+                    let next = chars.next().unwrap();
+                    s.push(next);
+                    if next == '`' {
+                        terminated = true;
+                        break;
+                    }
+                }
+                if !terminated {
+                    return Err(LexerErr::LexErr("Unterminated backtick comment".to_string()));
                 }
                 tokens.push(s);
             }
@@ -37,7 +62,12 @@ pub fn lexer(user_input: &str) -> Vec<String> {
         }
     }
 
-    tokens
+    Ok(tokens)
+}
+
+#[derive(Debug, PartialEq)]
+pub enum LexerErr {
+    LexErr(String),
 }
 
 #[cfg(test)]
@@ -47,7 +77,7 @@ mod test {
     #[test]
     fn lexer_expr_string_literal() {
         assert_eq!(
-            lexer("()"),
+            lexer("(\"i_am_a_string_literal\")").unwrap(),
             vec![
                 "(".to_string(),
                 "\"i_am_a_string_literal\"".to_string(),
@@ -58,13 +88,13 @@ mod test {
 
     #[test]
     fn lexer_empty_command() {
-        assert_eq!(lexer("()"), vec!["(".to_string(), ")".to_string()]);
+        assert_eq!(lexer("()").unwrap(), vec!["(".to_string(), ")".to_string()]);
     }
 
     #[test]
     fn lexer_help_command() {
         assert_eq!(
-            lexer("(help)"),
+            lexer("(help)").unwrap(),
             vec!["(".to_string(), "help".to_string(), ")".to_string()]
         );
     }
@@ -72,12 +102,12 @@ mod test {
     #[test]
     fn lexer_white_space_in_command_allowed() {
         assert_eq!(
-            lexer("( help   )"),
+            lexer("( help   )").unwrap(),
             vec!["(".to_string(), "help".to_string(), ")".to_string()]
         );
 
         assert_eq!(
-            lexer(" ( help   ) "),
+            lexer(" ( help   ) ").unwrap(),
             vec!["(".to_string(), "help".to_string(), ")".to_string()]
         );
     }
@@ -85,7 +115,7 @@ mod test {
     #[test]
     fn lexer_numbers_and_symbols() {
         assert_eq!(
-            lexer("(add 123 foo456)"),
+            lexer("(add 123 foo456)").unwrap(),
             vec![
                 "(".to_string(),
                 "add".to_string(),
@@ -99,7 +129,7 @@ mod test {
     #[test]
     fn lexer_nested_expressions() {
         assert_eq!(
-            lexer("(+ 1 (* 2 3))"),
+            lexer("(+ 1 (* 2 3))").unwrap(),
             vec![
                 "(".to_string(),
                 "+".to_string(),
@@ -117,7 +147,7 @@ mod test {
     #[test]
     fn lexer_ignores_extra_spaces() {
         assert_eq!(
-            lexer(" (   add    1    2  ) "),
+            lexer(" (   add    1    2  ) ").unwrap(),
             vec![
                 "(".to_string(),
                 "add".to_string(),
@@ -131,7 +161,7 @@ mod test {
     #[test]
     fn lexer_handles_multiple_expressions() {
         assert_eq!(
-            lexer("(help)(quit)"),
+            lexer("(help)(quit)").unwrap(),
             vec![
                 "(".to_string(),
                 "help".to_string(),
@@ -146,7 +176,7 @@ mod test {
     #[test]
     fn lexer_parses_alpha_numeric_symbols() {
         assert_eq!(
-            lexer("(search file1 file2 file3)"),
+            lexer("(search file1 file2 file3)").unwrap(),
             vec![
                 "(".to_string(),
                 "search".to_string(),
@@ -161,7 +191,7 @@ mod test {
     #[test]
     fn lexer_handles_single_char_operators_as_tokens() {
         assert_eq!(
-            lexer("(+ 1 2)"),
+            lexer("(+ 1 2)").unwrap(),
             vec![
                 "(".to_string(),
                 "+".to_string(),
@@ -175,7 +205,7 @@ mod test {
     #[test]
     fn lexer_parses_paren_in_string() {
         assert_eq!(
-            lexer("(search \"target(-t)ext\" filename)"),
+            lexer("(search \"target(-t)ext\" filename)").unwrap(),
             vec![
                 "(".to_string(),
                 "search".to_string(),
@@ -183,6 +213,50 @@ mod test {
                 "filename".to_string(),
                 ")".to_string()
             ]
+        );
+    }
+
+    #[test]
+    fn lexer_handles_backtick_comment() {
+        assert_eq!(
+            lexer("(foo `this is a comment` bar)").unwrap(),
+            vec![
+                "(".to_string(),
+                "foo".to_string(),
+                "`this is a comment`".to_string(),
+                "bar".to_string(),
+                ")".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn lexer_handles_multiline_backtick_comment() {
+        assert_eq!(
+            lexer("(foo `this is\na multiline\ncomment` bar)").unwrap(),
+            vec![
+                "(".to_string(),
+                "foo".to_string(),
+                "`this is\na multiline\ncomment`".to_string(),
+                "bar".to_string(),
+                ")".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn lexer_handles_unterminated_backtick_comment() {
+        assert_eq!(
+            lexer("(foo `unterminated comment bar)").unwrap_err(),
+            LexerErr::LexErr("Unterminated backtick comment".to_string())
+        );
+    }
+
+    #[test]
+    fn lexer_handles_unterminated_string_literal() {
+        assert_eq!(
+            lexer("(foo \"unterminated string bar)").unwrap_err(),
+            LexerErr::LexErr("Unterminated string literal".to_string())
         );
     }
 }

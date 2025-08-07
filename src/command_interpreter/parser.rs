@@ -50,8 +50,6 @@ fn parse_case(token: &str) -> Expr {
 
 #[cfg(test)]
 mod test {
-    use crate::statics::commands::get_commands;
-
     use super::*;
 
     #[test]
