@@ -1,5 +1,4 @@
 /*
-
     Check for balanced:
         ()      parens
 
@@ -7,24 +6,13 @@
         - in_comment
         - in_string
         - in_list
-        - in_list
         - init
 
-    initial context:
-        default
-
-    chars of interest:
-        (
-        )
-
     transition table:
-
         transition_function(context, char, char_history) => next_context, char_history
-
-    ex:
-        (exit)
-
 */
+
+use crate::errors::errors::JreplErr;
 
 enum Delimiter {}
 
@@ -65,7 +53,7 @@ impl Accumulator {
     }
 }
 
-fn transition_table(mut acc: Accumulator, token: &str) -> Result<Accumulator, SyntaxError> {
+fn transition_table(mut acc: Accumulator, token: &str) -> Result<Accumulator, JreplErr> {
     match acc.context_stack_peek() {
         Context::Init => match token {
             "(" => {
@@ -76,7 +64,7 @@ fn transition_table(mut acc: Accumulator, token: &str) -> Result<Accumulator, Sy
                 return Ok(acc);
             }
 
-            _ => Err(SyntaxError::InvalidSyntax(
+            _ => Err(JreplErr::InvalidSyntax(
                 "Context::Init - found token at start of expr which isnt a '(', token: {symbol}".to_string(),
             )),
         },
@@ -108,7 +96,7 @@ fn transition_table(mut acc: Accumulator, token: &str) -> Result<Accumulator, Sy
             //     acc.token_history.push(token.to_string());
             //     return Ok(acc);
             // }
-            _ => Err(SyntaxError::InvalidSymbol(
+            _ => Err(JreplErr::InvalidSymbol(
                 "Context::List - found token in list which isnt a '(', ')' or a symbol: {token}".to_string(),
             )),
         },
@@ -117,7 +105,7 @@ fn transition_table(mut acc: Accumulator, token: &str) -> Result<Accumulator, Sy
     }
 }
 
-pub fn verify_syntax(tokens: &[String]) -> Result<(), SyntaxError> {
+pub fn verify_syntax(tokens: &[String]) -> Result<(), JreplErr> {
     let acc = tokens
         .iter()
         .try_fold(Accumulator::new(), |acc, token| transition_table(acc, token));
@@ -129,18 +117,13 @@ pub fn verify_syntax(tokens: &[String]) -> Result<(), SyntaxError> {
     if let Ok(acc) = acc {
         if !acc.delimiter_stack.is_empty() {
             println!("acc.delimiter_stack: {:?}", acc.delimiter_stack);
-            return Err(SyntaxError::InvalidSyntax(
+            return Err(JreplErr::InvalidSyntax(
                 "Unbalanced delimiter somewhere in user input".to_string(),
             ));
         }
     }
 
     Ok(())
-}
-#[derive(Debug, PartialEq)]
-pub enum SyntaxError {
-    InvalidSyntax(String),
-    InvalidSymbol(String),
 }
 
 #[cfg(test)]

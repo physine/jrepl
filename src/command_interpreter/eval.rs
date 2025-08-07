@@ -1,7 +1,7 @@
-use crate::command_interpreter::types::Expr;
 use crate::{appstate::AppState, command_interpreter::types::Effect};
+use crate::{command_interpreter::types::Expr, errors::errors::JreplErr};
 
-pub fn eval(app_state: &AppState, expr: &Expr) -> Result<Effect, EvalError> {
+pub fn eval(app_state: &AppState, expr: &Expr) -> Result<Effect, JreplErr> {
     match expr {
         Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None => Ok(Effect::from_eval_value(expr.clone())),
         // get the terminal at the end of the symbol chain.
@@ -27,20 +27,8 @@ pub fn eval(app_state: &AppState, expr: &Expr) -> Result<Effect, EvalError> {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum EvalError {
-    UndefinedSymbol(String),
-    InvalidSyntax(String), // unbalances '"' or '(' would have been caught by syntax_validation
-    // TypeError(String),
-    IOError(String),
-    // ... add more as needed
-    // Custom(String),
-}
-
 #[cfg(test)]
 mod test {
-    use crate::statics::commands::get_commands;
-
     use super::*;
 
     fn help_cmd_ast() -> Expr {

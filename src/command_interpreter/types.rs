@@ -1,22 +1,12 @@
 use std::rc::Rc;
 
-use crate::command_interpreter::interpreter::InterpretErr;
-use crate::{appstate::State, command_interpreter::command::Command};
+use crate::{appstate::State, command_interpreter::command::Command, errors::errors::JreplErr};
 
 #[derive(Clone)]
 pub enum Referent {
     Command(Rc<Command>),
     Expr(Expr),
 }
-
-// #[derive(Debug, PartialEq)]
-// pub enum EvalValue {
-//     String(String),
-//     Number(f64),
-//     Bool(bool),
-//     None, // why do I have this?
-//           // fn - possible for a lambda in the furure
-// }
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
@@ -39,7 +29,7 @@ pub struct Effect {
     pub eval_value: Option<Expr>,
     pub next_state: Option<State>,
     pub user_feedback: Option<String>, // If a file is bound to a symbol with (load <file_path>) it might not have an eval_value, but the user should get feedback.
-    pub err: Option<InterpretErr>,
+    pub err: Option<JreplErr>,
     //     pub side_effect: Option<SideEffect>,   // IO, print, etc.
 }
 
@@ -53,7 +43,7 @@ impl Effect {
         }
     }
 
-    pub fn from_err(err: InterpretErr) -> Effect {
+    pub fn from_err(err: JreplErr) -> Effect {
         Effect {
             eval_value: None,
             next_state: None,

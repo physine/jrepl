@@ -26,16 +26,14 @@ Command:
 
 use crate::{
     appstate::AppState,
-    command_interpreter::{
-        eval::EvalError,
-        types::{Effect, Expr},
-    },
+    command_interpreter::types::{Effect, Expr},
+    errors::errors::JreplErr,
 };
 
 pub struct Command {
     pub symbol: String,
     pub description: String,
-    pub eval_fn_ptr: Box<dyn Fn(&AppState, &[Expr]) -> Result<Effect, EvalError>>,
+    pub eval_fn_ptr: Box<dyn Fn(&AppState, &[Expr]) -> Result<Effect, JreplErr>>,
 }
 
 impl Command {
