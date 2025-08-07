@@ -1,4 +1,6 @@
-pub fn lexer(user_input: &str) -> Result<Vec<String>, LexerErr> {
+use crate::errors::errors::JreplErr;
+
+pub fn lexer(user_input: &str) -> Result<Vec<String>, JreplErr> {
     let mut tokens = Vec::new();
     let mut chars = user_input.chars().peekable();
 
@@ -22,7 +24,7 @@ pub fn lexer(user_input: &str) -> Result<Vec<String>, LexerErr> {
                     }
                 }
                 if !terminated {
-                    return Err(LexerErr::LexErr("Unterminated string literal".to_string()));
+                    return Err(JreplErr::LexErr("Unterminated string literal".to_string()));
                 }
                 tokens.push(s);
             }
@@ -41,7 +43,7 @@ pub fn lexer(user_input: &str) -> Result<Vec<String>, LexerErr> {
                     }
                 }
                 if !terminated {
-                    return Err(LexerErr::LexErr("Unterminated backtick comment".to_string()));
+                    return Err(JreplErr::LexErr("Unterminated backtick comment".to_string()));
                 }
                 tokens.push(s);
             }
@@ -63,11 +65,6 @@ pub fn lexer(user_input: &str) -> Result<Vec<String>, LexerErr> {
     }
 
     Ok(tokens)
-}
-
-#[derive(Debug, PartialEq)]
-pub enum LexerErr {
-    LexErr(String),
 }
 
 #[cfg(test)]
@@ -272,7 +269,7 @@ mod test {
     fn lexer_handles_unterminated_backtick_comment() {
         assert_eq!(
             lexer("(foo `unterminated comment bar)").unwrap_err(),
-            LexerErr::LexErr("Unterminated backtick comment".to_string())
+            JreplErr::LexErr("Unterminated backtick comment".to_string())
         );
     }
 
@@ -280,7 +277,7 @@ mod test {
     fn lexer_handles_unterminated_string_literal() {
         assert_eq!(
             lexer("(foo \"unterminated string bar)").unwrap_err(),
-            LexerErr::LexErr("Unterminated string literal".to_string())
+            JreplErr::LexErr("Unterminated string literal".to_string())
         );
     }
 }

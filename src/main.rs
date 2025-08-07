@@ -1,21 +1,16 @@
-use std::io::Write;
+mod appstate;
+mod command_interpreter;
+mod errors;
+mod io;
+mod statics;
 
 use clap::Parser;
-
-mod io;
-use io::read::user_input;
-
-mod command_interpreter;
 use command_interpreter::interpreter::interpret;
-
-mod appstate;
-use crate::{
-    appstate::AppState,
-    command_interpreter::types::{Effect, Expr},
-};
-
-mod statics;
+use io::read::user_input;
 use statics::commands::get_commands;
+use std::io::Write;
+
+use crate::{appstate::AppState, command_interpreter::types::Effect};
 
 fn main() {
     let args = Args::parse();

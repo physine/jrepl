@@ -1,9 +1,11 @@
-use crate::command_interpreter::{
-    command::{self, Command},
-    eval::EvalError,
-    types::{Expr, Referent},
+use crate::{
+    command_interpreter::{
+        command::Command,
+        types::{Expr, Referent},
+    },
+    errors::errors::JreplErr,
 };
-use std::{clone, collections::HashMap, fmt::format, rc::Rc};
+use std::{collections::HashMap, rc::Rc};
 
 // -------------------------------- AppState -------------------------------- //
 
@@ -20,19 +22,20 @@ impl AppState {
         self.state = state;
     }
 
-    pub fn resolve_symbol_to_terminal(&self, symbol: &str) -> Result<Expr, EvalError> {
+    pub fn resolve_symbol_to_terminal(&self, symbol: &str) -> Result<Expr, JreplErr> {
         let symbol_table = &self.state.symbol_table;
 
         let referent = symbol_table
             .get(symbol)
-            .ok_or_else(|| EvalError::UndefinedSymbol(format!("Undefined symbol: {symbol}.")))?;
+            .ok_or_else(|| JreplErr::UndefinedSymbol("Undefined symbol: {symbol}.".to_string()))?;
 
         match referent {
             Referent::Command(_) => {
                 // TODO: create a specific error enum for this error insted of just using UndefinedSymbol
-                Err(EvalError::UndefinedSymbol(format!(
+                Err(JreplErr::UndefinedSymbol(
                     "Expected symbol '{symbol}' to resolve to a terminal but instead resolved to a command."
-                )))
+                        .to_string(),
+                ))
             }
             Referent::Expr(expr) => match expr {
                 Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None | Expr::List(_) => Ok(expr.clone()),
@@ -41,23 +44,23 @@ impl AppState {
         }
     }
 
-    pub fn get_command_from_symbol(&self, symbol: &str) -> Result<&Command, EvalError> {
+    pub fn get_command_from_symbol(&self, symbol: &str) -> Result<&Command, JreplErr> {
         let symbol_table = &self.state.symbol_table;
 
         if symbol_table.is_empty() {
             // TODO: create a specific error enum for this error insted of just using UndefinedSymbol
-            return Err(EvalError::UndefinedSymbol(format!("symbol_table is empty. 0.1")));
+            return Err(JreplErr::UndefinedSymbol("symbol_table is empty. 0.1".to_string()));
         }
 
         let referent = symbol_table
             .get(symbol)
-            .ok_or_else(|| EvalError::UndefinedSymbol(format!("Undefined symbol: {symbol}. Expected a command.")))?;
+            .ok_or_else(|| JreplErr::UndefinedSymbol("Undefined symbol: {symbol}. Expected a command.".to_string()))?;
 
         match referent {
             Referent::Command(command) => Ok(command),
-            _ => Err(EvalError::UndefinedSymbol(format!(
-                "Found symbol: '{symbol}' where a command was expected."
-            ))), // TODO: create a specific error enum for this error insted of just using UndefinedSymbol
+            _ => Err(JreplErr::UndefinedSymbol(
+                "Found symbol: '{symbol}' where a command was expected.".to_string(),
+            )),
         }
     }
 
@@ -93,10 +96,6 @@ impl AppState {
 
 #[derive(Clone)]
 pub struct State {
-    // open_input_files: Vec<File>,
-    // pub symbol_table: Map<String, >
-    // pub json: Vec<Value>,
-    // pub symbol_table: Map<String, Value>,
     editor: Editor,
     exit: bool,
     commands: Vec<Rc<Command>>,
@@ -170,79 +169,3 @@ impl StateBuilder {
         }
     }
 }
-
-// impl AppState {
-//     pub fn get_current_state(&self) -> &State {
-//         self.state_timeline.get(self.current_state).unwrap()
-//     }
-
-//     pub fn set_next_state(&mut self, state: State) {
-//         self.state_timeline.push(state);
-//         self.current_state += 1;
-//     }
-
-//     // pub fn clone_current_state(&self) -> State {
-//     //     self.state_timeline.get(self.current_state).unwrap().to_owned()
-//     // }
-//     pub fn set_commands(&mut self, commands: Vec<Command>) {
-//         let commands: Vec<Rc<Command>> = commands.into_iter().map(Rc::new).collect();
-//         self.state_timeline.get_mut(self.current_state).unwrap().commands = commands;
-//         self.register_commands_with_symbol_table();
-//     }
-
-//     pub fn get_commands(&self) -> &Vec<Rc<Command>> {
-//         &self.state_timeline.get(self.current_state).unwrap().commands
-//     }
-
-//     fn register_commands_with_symbol_table(&mut self) {
-//         let state = self.state_timeline.get_mut(self.current_state).unwrap();
-//         let commands = &state.commands;
-//         let symbol_table = &mut state.symbol_table;
-//         for command in commands {
-//             symbol_table.insert(command.symbol.clone(), Referent::Command(command.clone()));
-//         }
-//     }
-
-//     pub fn should_exit(&self) -> bool {
-//         self.state_timeline.get(self.current_state).unwrap().exit
-//     }
-// }
-
-// // -------------------------------- State -------------------------------- //
-
-// // #[derive(Clone, Debug, PartialEq)]
-// pub struct State {
-//     // open_input_files: Vec<File>,
-//     // pub symbol_table: Map<String, >
-//     // pub json: Vec<Value>,
-//     // pub symbol_table: Map<String, Value>,
-//     editor: Editor,
-//     exit: bool,
-//     commands: Vec<Rc<Command>>,
-//     symbol_table: HashMap<String, Referent>,
-// }
-
-// // TODO: register Commands symbols with AppState
-
-// impl State {
-//     fn new() -> State {
-//         State {
-//             editor: Editor {
-//                 prompt_symbol: ">".into(),
-//                 prompt_text: "()".into(),
-//                 cursor_pos: 1, // 0 is where '(' is, and the cursor is just to the right of it
-//             },
-//             exit: false,
-//             commands: Vec::new(),
-//             symbol_table: HashMap::new(),
-//         }
-//     }
-// }
-
-// #[derive(Clone, Debug, PartialEq)]
-// struct Editor {
-//     pub prompt_symbol: String,
-//     // pub prompt_text: LinkedList<String>,
-//     pub prompt_text: String,
-//     pub cursor_pos: usize,
-// }
