@@ -1,4 +1,3 @@
-use crate::appstate::AppState;
 use crate::command_interpreter::eval;
 use crate::command_interpreter::eval::EvalError;
 use crate::command_interpreter::lexer;
@@ -6,9 +5,16 @@ use crate::command_interpreter::parser::parse;
 use crate::command_interpreter::types::Effect;
 use crate::command_interpreter::validation::SyntaxError;
 use crate::command_interpreter::validation::verify_syntax;
+use crate::{appstate::AppState, command_interpreter::lexer::LexerErr};
 
 pub fn interpret(app_state: &AppState, user_input: &str) -> Effect {
-    let tokens = lexer(user_input);
+    let lexer_result = lexer(user_input);
+
+    if let Err(err) = lexer_result {
+        return Effect::from_err(InterpretErr::LexificationErr(err));
+    }
+
+    let tokens = lexer_result.unwrap();
 
     let verify_syntax_result = verify_syntax(&tokens);
     if let Err(err) = verify_syntax_result {
@@ -25,7 +31,7 @@ pub fn interpret(app_state: &AppState, user_input: &str) -> Effect {
 
 #[derive(Debug, PartialEq)]
 pub enum InterpretErr {
-    // LexerErr(String), // possible check for chars out of scope (ie: UTF-8)
+    LexificationErr(LexerErr), // possible check for chars out of scope (ie: UTF-8)
     VerifySyntaxErr(SyntaxError),
     ParserErr(String),
     EvalErr(EvalError),

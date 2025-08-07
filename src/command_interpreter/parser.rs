@@ -25,7 +25,7 @@ fn parse_helper(tokens: &[String], mut i: usize) -> (Expr, usize) {
 }
 
 fn parse_case(token: &str) -> Expr {
-    // String: starts and ends with quotes, not a number inside
+    // String: starts and ends with quotes, not a number inside.
     let string_re = Regex::new(r#"^"[^0-9][^"]*"$"#).unwrap();
     // Symbol: not quoted, not starting with a number, no whitespace or quotes, not starting with a number, can start with letters, or +, -, *, /
     let symbol_re = Regex::new(r#"^([A-Za-z_][A-Za-z0-9_\-+*/<>!=]*)|([+\-*/<>!=]{1,})$"#).unwrap();
@@ -50,13 +50,23 @@ fn parse_case(token: &str) -> Expr {
 
 #[cfg(test)]
 mod test {
-    use crate::statics::commands::get_commands;
-
     use super::*;
 
     #[test]
     fn parse_empty_expression() {
         assert_eq!(parse(&vec!["(".to_string(), ")".to_string()]), Expr::List(vec![]));
+    }
+
+    #[test]
+    fn parse_string_literal() {
+        assert_eq!(
+            parse(&vec![
+                "(".to_string(),
+                "\"i_am_a_string_literal\"".to_string(),
+                ")".to_string()
+            ]),
+            Expr::List(vec![Expr::Symbol("help".to_string())])
+        );
     }
 
     #[test]
