@@ -75,12 +75,36 @@ mod test {
     use super::*;
 
     #[test]
-    fn lexer_expr_string_literal() {
+    fn lexer_string_literal() {
         assert_eq!(
             lexer("(\"i_am_a_string_literal\")").unwrap(),
             vec![
                 "(".to_string(),
                 "\"i_am_a_string_literal\"".to_string(),
+                ")".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn lexer_string_literal_with_paren() {
+        assert_eq!(
+            lexer("(\"i_am_a_(string_literal\")").unwrap(),
+            vec![
+                "(".to_string(),
+                "\"i_am_a_(string_literal\"".to_string(),
+                ")".to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn lexer_string_literal_with_backtick() {
+        assert_eq!(
+            lexer("(\"i_am_a_\\`string_literal\")").unwrap(),
+            vec![
+                "(".to_string(),
+                "\"i_am_a_\\`string_literal\"".to_string(),
                 ")".to_string()
             ]
         );

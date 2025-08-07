@@ -2,9 +2,6 @@
 
     Check for balanced:
         ()      parens
-        ""      quotes
-        ``      comment
-
 
     contexts (current_context):
         - in_comment
@@ -19,15 +16,11 @@
     chars of interest:
         (
         )
-        "
-        /
-        *
-        other
 
     transition table:
 
         transition_function(context, char, char_history) => next_context, char_history
-    
+
     ex:
         (exit)
 
@@ -37,7 +30,7 @@ enum Delimiter {}
 
 impl Delimiter {
     pub fn is(token: &str) -> bool {
-        matches!(token, "(" | ")" | "\"" | "/" | "\\" | "*")
+        matches!(token, "(" | ")" | "\"" | "\\")
     }
 }
 
@@ -137,7 +130,7 @@ pub fn verify_syntax(tokens: &[String]) -> Result<(), SyntaxError> {
         if !acc.delimiter_stack.is_empty() {
             println!("acc.delimiter_stack: {:?}", acc.delimiter_stack);
             return Err(SyntaxError::InvalidSyntax(
-                "Unbalanced delimiters in user input".to_string(),
+                "Unbalanced delimiter somewhere in user input".to_string(),
             ));
         }
     }

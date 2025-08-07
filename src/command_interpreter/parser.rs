@@ -25,7 +25,7 @@ fn parse_helper(tokens: &[String], mut i: usize) -> (Expr, usize) {
 }
 
 fn parse_case(token: &str) -> Expr {
-    // String: starts and ends with quotes, not a number inside
+    // String: starts and ends with quotes, not a number inside.
     let string_re = Regex::new(r#"^"[^0-9][^"]*"$"#).unwrap();
     // Symbol: not quoted, not starting with a number, no whitespace or quotes, not starting with a number, can start with letters, or +, -, *, /
     let symbol_re = Regex::new(r#"^([A-Za-z_][A-Za-z0-9_\-+*/<>!=]*)|([+\-*/<>!=]{1,})$"#).unwrap();
