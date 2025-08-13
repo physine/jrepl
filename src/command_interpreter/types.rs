@@ -24,6 +24,12 @@ pub enum Expr {
     List(Vec<Expr>), // e.g. (add 1 2)
 }
 
+impl Expr {
+    pub fn is_terminal(&self) -> bool {
+        matches!(self, Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None)
+    }
+}
+
 // #[derive(Debug, PartialEq)]
 pub struct Effect {
     pub eval_value: Option<Expr>,

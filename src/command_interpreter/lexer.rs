@@ -77,6 +77,12 @@ fn transition_table(mut acc: Accumulator, c: char) -> Result<Accumulator, JreplE
                 Ok(acc)
             }
 
+            sym if is_op_char(c) => {
+                acc.memory.push(sym);
+                acc.context_stack.push(Context::Symbol);
+                Ok(acc)
+            }
+
             't' => {
                 acc.memory.push(c);
                 acc.context_stack.push(Context::SymbolOrTrue);
@@ -98,7 +104,7 @@ fn transition_table(mut acc: Accumulator, c: char) -> Result<Accumulator, JreplE
             ' ' => Ok(acc),
 
             _ => Err(JreplErr::InvalidSymbol(format!(
-                "Found Invalid char in user_input while tokenizing a Bool or Symbol. Char: {}.",
+                "Found Invalid char in user_input while tokenizing in a List. Char: {}.",
                 c
             ))),
         },
@@ -207,6 +213,16 @@ fn transition_table(mut acc: Accumulator, c: char) -> Result<Accumulator, JreplE
                 Ok(acc)
             }
 
+            _ if acc.memory.ends_with("e") && c == ')' => {
+                acc.tokens.push(Token::BoolLiteral(String::from("true")));
+                acc.tokens.push(Token::CloseParen(String::from(")")));
+                acc.context_stack.pop();
+                acc.context_stack.pop();
+                acc.reset_memory();
+                acc.delimiter_balance_dec()?;
+                Ok(acc)
+            }
+
             _ if c.is_alphanumeric() => {
                 acc.memory.push(c);
                 acc.context_stack.pop();
@@ -215,13 +231,18 @@ fn transition_table(mut acc: Accumulator, c: char) -> Result<Accumulator, JreplE
             }
 
             _ => Err(JreplErr::InvalidSymbol(format!(
-                "Found Invalid char in user_input while tokenizing a Bool or Symbol. Char: {}.",
+                "Found Invalid char in user_input while tokenizing a 'true' or Symbol. Char: {}.",
                 c
             ))),
         },
 
         Context::SymbolOrFalse => match c {
             _ if acc.memory.ends_with("f") && c == 'a' => {
+                acc.memory.push(c);
+                Ok(acc)
+            }
+
+            _ if acc.memory.ends_with("a") && c == 'l' => {
                 acc.memory.push(c);
                 Ok(acc)
             }
@@ -240,6 +261,16 @@ fn transition_table(mut acc: Accumulator, c: char) -> Result<Accumulator, JreplE
                 acc.tokens.push(Token::BoolLiteral(String::from("false")));
                 acc.context_stack.pop();
                 acc.reset_memory();
+                Ok(acc)
+            }
+
+            _ if acc.memory.ends_with("e") && c == ')' => {
+                acc.tokens.push(Token::BoolLiteral(String::from("false")));
+                acc.tokens.push(Token::CloseParen(String::from(")")));
+                acc.context_stack.pop();
+                acc.context_stack.pop();
+                acc.reset_memory();
+                acc.delimiter_balance_dec()?;
                 Ok(acc)
             }
 
@@ -285,6 +316,10 @@ fn transition_table(mut acc: Accumulator, c: char) -> Result<Accumulator, JreplE
             ))),
         },
     }
+}
+
+fn is_op_char(ch: char) -> bool {
+    matches!(ch, '+' | '-' | '*' | '/' | '<' | '>' | '=')
 }
 
 struct Accumulator {
@@ -356,6 +391,7 @@ enum Context {
 
 #[cfg(test)]
 mod test {
+
     use super::*;
 
     fn open() -> Token {
@@ -376,11 +412,26 @@ mod test {
     fn number(s: &str) -> Token {
         Token::NumberLiteral(s.to_string())
     }
+    fn bool(s: &str) -> Token {
+        Token::BoolLiteral(s.to_string())
+    }
 
     #[test]
     fn lexer_help_command() {
         let result = lexer("(help)").expect("[lexer_help_command] Produced an error.");
         assert_eq!(result, vec![open(), symbol("help"), close()]);
+    }
+
+    #[test]
+    fn lexer_handles_true_literal() {
+        let result = lexer("(true)").expect("[lexer_handles_true_literal] Produced an error.");
+        assert_eq!(result, vec![open(), bool("true"), close()]);
+    }
+
+    #[test]
+    fn lexer_handles_false_literal() {
+        let result = lexer("(false)").expect("[lexer_handles_true_literal] Produced an error.");
+        assert_eq!(result, vec![open(), bool("false"), close()]);
     }
 
     #[test]
@@ -398,11 +449,17 @@ mod test {
         );
     }
 
-    // #[test]
-    // fn lexer_handles_single_char_operators_as_tokens() {
-    //     let result = lexer("(+ 1 2)").expect("[lexer_handles_single_char_operators_as_tokens] Produced an error.");
-    //     assert_eq!(result, vec![open(), symbol("+"), symbol("1"), symbol("2"), close()]);
-    // }
+    #[test]
+    fn lexer_handles_single_char_operators_as_tokens() {
+        let result = lexer("(+ 1 2)").expect("[lexer_handles_single_char_operators_as_tokens] Produced an error.");
+        assert_eq!(result, vec![open(), symbol("+"), number("1"), number("2"), close()]);
+    }
+
+    #[test]
+    fn lexer_handles_plus_symbol_operator() {
+        let result = lexer("(+ 1 2)").expect("[lexer_handles_plus_symbol_operator] Produced an error.");
+        assert_eq!(result, vec![open(), symbol("+"), number("1"), number("2"), close()]);
+    }
 
     #[test]
     fn lexer_white_space_in_command_allowed() {

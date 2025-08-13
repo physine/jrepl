@@ -10,4 +10,6 @@ pub enum JreplErr {
     ParserErr(String),
     EvalErr(String),
     UndefinedSymbol(String),
+    ArithmeticErr(String),
+    OperatorFormatErr(String),
 }
