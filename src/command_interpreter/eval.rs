@@ -29,20 +29,68 @@ pub fn eval(app_state: &AppState, expr: &Expr) -> Result<Effect, JreplErr> {
 
 #[cfg(test)]
 mod test {
+    use crate::statics::commands::get_commands;
+
     use super::*;
 
-    fn help_cmd_ast() -> Expr {
-        Expr::List(vec![Expr::Symbol("help".into())])
+    fn sym(s: &str) -> Expr {
+        Expr::Symbol(s.into())
+    }
+
+    #[test]
+    fn eval_empty_list_returns_none() {
+        let app_state = AppState::new();
+        let ast = Expr::List(vec![]);
+
+        let result = eval(&app_state, &ast).map(|e| e.eval_value);
+
+        assert_eq!(Ok(Some(Expr::None)), result);
+    }
+
+    #[test]
+    #[should_panic(expected = "List does not start with Command")]
+    fn eval_list_head_is_not_symbol_panics() {
+        let app_state = AppState::new();
+        let ast = Expr::List(vec![Expr::String("hello".into())]);
+
+        let _ = eval(&app_state, &ast);
+    }
+
+    #[test]
+    fn eval_help_no_args() {
+        let mut app_state = AppState::new();
+        app_state.set_commands(get_commands());
+
+        let ast = Expr::List(vec![sym("help")]);
+
+        let out = eval(&app_state, &ast).map(|e| e.eval_value).unwrap();
+        match out {
+            Some(Expr::String(s)) => {
+                assert!(s.contains("display avalible options. Usage: (help)"));
+            }
+            other => panic!("Unexpected eval output: {:?}", other),
+        }
+    }
+
+    #[test]
+    fn eval_unknown_command_returns_err() {
+        let mut app_state = AppState::new();
+        app_state.set_commands(get_commands());
+
+        let ast = Expr::List(vec![sym("nope")]);
+
+        let out = eval(&app_state, &ast);
+        assert!(out.is_err());
     }
 
     // #[test]
-    // fn eval_help_ast() {
+    // fn eval_command_with_args() {
     //     let mut app_state = AppState::new();
     //     app_state.set_commands(get_commands());
-    //     let ast = help_cmd_ast();
 
-    //     let result = eval(&app_state, &ast).map(|effect| effect.eval_value);
+    //     let ast = Expr::List(vec![sym("echo"), Expr::String("hi".into()), Expr::Number(42.0)]);
 
-    //     assert_eq!(Ok(Some(Expr::String("<help command info>".to_string()))), result);
+    //     let out = eval(&app_state, &ast);
+    //     assert!(out.is_ok());
     // }
 }

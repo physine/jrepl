@@ -1,5 +1,62 @@
-use crate::command_interpreter::types::Expr;
+use crate::command_interpreter::{lexer::Token, types::Expr};
 use regex::Regex;
+
+pub fn parse(tokens: &[Token]) -> Expr {
+    let (expr, _) = parse_helper(tokens, 0);
+    expr
+}
+
+fn parse_helper(tokens: &[Token], mut i: usize) -> (Expr, usize) {
+    use Token::*;
+
+    match tokens.get(i) {
+        // Start of a list: consume '(', parse until matching ')'
+        Some(OpenParen(_)) => {
+            i += 1; // skip '('
+            let mut exprs = Vec::new();
+
+            while i < tokens.len() {
+                match tokens.get(i) {
+                    // End of this list
+                    Some(CloseParen(_)) => {
+                        i += 1; // consume ')'
+                        break;
+                    }
+                    // Ignore comments inside lists
+                    Some(Comment(_)) => {
+                        i += 1;
+                    }
+                    // Anything else: parse a sub-expression
+                    _ => {
+                        let (expr, next_i) = parse_helper(tokens, i);
+                        exprs.push(expr);
+                        i = next_i;
+                    }
+                }
+            }
+
+            (Expr::List(exprs), i)
+        }
+
+        // A stray ')' at this position: mirror old behavior by yielding None and consuming it.
+        Some(CloseParen(_)) => (Expr::None, i + 1),
+
+        // Skip comments in atom position and continue parsing the next thing.
+        Some(Comment(_)) => parse_helper(tokens, i + 1),
+
+        // Atom cases
+        Some(StringLiteral(s)) => (Expr::String(s.clone()), i + 1),
+        Some(NumberLiteral(s)) => {
+            let n = s.parse::<f64>().expect("lexer produced invalid number literal");
+            (Expr::Number(n), i + 1)
+        }
+        Some(BoolLiteral(s)) => (Expr::Bool(s == "true"), i + 1),
+        Some(Symbol(s)) => (Expr::Symbol(s.clone()), i + 1),
+
+        // End of input
+        None => (Expr::None, i),
+    }
+}
 
 // pub fn parse(tokens: &[String]) -> Expr {
 //     let (expr, _) = parse_helper(tokens, 0);
@@ -48,208 +105,148 @@ use regex::Regex;
 //     }
 // }
 
-// #[cfg(test)]
-// mod test {
-//     use super::*;
+#[cfg(test)]
+mod test {
+    use super::*;
 
-//     #[test]
-//     fn parse_empty_expression() {
-//         assert_eq!(parse(&vec!["(".to_string(), ")".to_string()]), Expr::List(vec![]));
-//     }
+    #[test]
+    fn parse_empty_expression() {
+        let tokens = vec![Token::OpenParen("(".into()), Token::CloseParen(")".into())];
+        assert_eq!(parse(&tokens), Expr::List(vec![]));
+    }
 
-//     #[test]
-//     fn parse_string_literal() {
-//         assert_eq!(
-//             parse(&vec![
-//                 "(".to_string(),
-//                 "\"i_am_a_string_literal\"".to_string(),
-//                 ")".to_string()
-//             ]),
-//             Expr::List(vec![Expr::Symbol("help".to_string())])
-//         );
-//     }
+    #[test]
+    fn parse_string_literal() {
+        let tokens = vec![
+            Token::OpenParen("(".into()),
+            Token::StringLiteral("i_am_a_string_literal".into()),
+            Token::CloseParen(")".into()),
+        ];
+        assert_eq!(
+            parse(&tokens),
+            Expr::List(vec![Expr::String("i_am_a_string_literal".into())])
+        );
+    }
 
-//     #[test]
-//     fn parse_help_command() {
-//         assert_eq!(
-//             parse(&vec!["(".to_string(), "help".to_string(), ")".to_string()]),
-//             Expr::List(vec![Expr::Symbol("help".to_string())])
-//         );
-//     }
+    #[test]
+    fn parse_help_command() {
+        let tokens = vec![
+            Token::OpenParen("(".into()),
+            Token::Symbol("help".into()),
+            Token::CloseParen(")".into()),
+        ];
+        assert_eq!(parse(&tokens), Expr::List(vec![Expr::Symbol("help".into())]));
+    }
 
-//     #[test]
-//     fn parse_search_command() {
-//         assert_eq!(
-//             parse(&vec![
-//                 "(".to_string(),
-//                 "search".to_string(),
-//                 "\"hi\"".to_string(),
-//                 "file1".to_string(),
-//                 "file2".to_string(),
-//                 ")".to_string(),
-//             ]),
-//             Expr::List(vec![
-//                 Expr::Symbol("search".to_string()),
-//                 Expr::String("hi".to_string()),
-//                 Expr::Symbol("file1".to_string()),
-//                 Expr::Symbol("file2".to_string()),
-//             ])
-//         );
-//     }
+    #[test]
+    fn parse_search_command() {
+        let tokens = vec![
+            Token::OpenParen("(".into()),
+            Token::Symbol("search".into()),
+            Token::StringLiteral("hi".into()),
+            Token::Symbol("file1".into()),
+            Token::Symbol("file2".into()),
+            Token::CloseParen(")".into()),
+        ];
+        assert_eq!(
+            parse(&tokens),
+            Expr::List(vec![
+                Expr::Symbol("search".into()),
+                Expr::String("hi".into()),
+                Expr::Symbol("file1".into()),
+                Expr::Symbol("file2".into()),
+            ])
+        );
+    }
 
-//     #[test]
-//     fn parse_nested_command() {
-//         assert_eq!(
-//             parse(&vec![
-//                 "(".to_string(),
-//                 "+".to_string(),
-//                 "1".to_string(),
-//                 "(".to_string(),
-//                 "-".to_string(),
-//                 "10".to_string(),
-//                 "(".to_string(),
-//                 "+".to_string(),
-//                 "7".to_string(),
-//                 "7".to_string(),
-//                 ")".to_string(),
-//                 ")".to_string()
-//             ]),
-//             Expr::List(vec![
-//                 Expr::Symbol("+".to_string()),
-//                 Expr::Number(1.0),
-//                 Expr::List(vec![
-//                     Expr::Symbol("-".to_string()),
-//                     Expr::Number(10.0),
-//                     Expr::List(vec![
-//                         Expr::Symbol("+".to_string()),
-//                         Expr::Number(7.0),
-//                         Expr::Number(7.0)
-//                     ])
-//                 ])
-//             ])
-//         );
-//     }
+    #[test]
+    fn parse_nested_command() {
+        let tokens = vec![
+            Token::OpenParen("(".into()),
+            Token::Symbol("+".into()),
+            Token::NumberLiteral("1".into()),
+            Token::OpenParen("(".into()),
+            Token::Symbol("-".into()),
+            Token::NumberLiteral("10".into()),
+            Token::OpenParen("(".into()),
+            Token::Symbol("+".into()),
+            Token::NumberLiteral("7".into()),
+            Token::NumberLiteral("7".into()),
+            Token::CloseParen(")".into()),
+            Token::CloseParen(")".into()),
+            Token::CloseParen(")".into()),
+        ];
+        assert_eq!(
+            parse(&tokens),
+            Expr::List(vec![
+                Expr::Symbol("+".into()),
+                Expr::Number(1.0),
+                Expr::List(vec![
+                    Expr::Symbol("-".into()),
+                    Expr::Number(10.0),
+                    Expr::List(vec![Expr::Symbol("+".into()), Expr::Number(7.0), Expr::Number(7.0),])
+                ])
+            ])
+        );
+    }
 
-//     #[test]
-//     fn parse_operator_symbol() {
-//         assert_eq!(
-//             parse(&vec![
-//                 "(".to_string(),
-//                 "+".to_string(),
-//                 "1".to_string(),
-//                 "2".to_string(),
-//                 ")".to_string()
-//             ]),
-//             Expr::List(vec![
-//                 Expr::Symbol("+".to_string()),
-//                 Expr::Number(1.0),
-//                 Expr::Number(2.0),
-//             ])
-//         );
-//     }
+    #[test]
+    fn parse_operator_symbol() {
+        let tokens = vec![
+            Token::OpenParen("(".into()),
+            Token::Symbol("+".into()),
+            Token::NumberLiteral("1".into()),
+            Token::NumberLiteral("2".into()),
+            Token::CloseParen(")".into()),
+        ];
+        assert_eq!(
+            parse(&tokens),
+            Expr::List(vec![Expr::Symbol("+".into()), Expr::Number(1.0), Expr::Number(2.0),])
+        );
+    }
 
-//     #[test]
-//     fn parse_quoted_operator_as_string() {
-//         assert_eq!(
-//             parse(&vec!["(".to_string(), "\"+\"".to_string(), ")".to_string()]),
-//             Expr::List(vec![Expr::String("+".to_string())])
-//         );
-//     }
+    #[test]
+    fn parse_quoted_operator_as_string() {
+        let tokens = vec![
+            Token::OpenParen("(".into()),
+            Token::StringLiteral("+".into()),
+            Token::CloseParen(")".into()),
+        ];
+        assert_eq!(parse(&tokens), Expr::List(vec![Expr::String("+".into())]));
+    }
 
-//     #[test]
-//     fn parse_boolean_literals() {
-//         assert_eq!(
-//             parse(&vec![
-//                 "(".to_string(),
-//                 "true".to_string(),
-//                 "false".to_string(),
-//                 ")".to_string()
-//             ]),
-//             Expr::List(vec![Expr::Bool(true), Expr::Bool(false),])
-//         );
-//     }
+    #[test]
+    fn parse_boolean_literals() {
+        let tokens = vec![
+            Token::OpenParen("(".into()),
+            Token::BoolLiteral("true".into()),
+            Token::BoolLiteral("false".into()),
+            Token::CloseParen(")".into()),
+        ];
+        assert_eq!(parse(&tokens), Expr::List(vec![Expr::Bool(true), Expr::Bool(false)]));
+    }
 
-//     #[test]
-//     #[should_panic(expected = "Unexpected token not recognised as a terminal type")]
-//     fn parse_terminal_invalid_symbol_starting_with_number() {
-//         parse_case("123abc"); // should panic
-//     }
+    #[test]
+    fn parse_ignores_comments() {
+        let tokens = vec![
+            Token::OpenParen("(".into()),
+            Token::Comment(" this is a comment ".into()),
+            Token::Symbol("a".into()),
+            Token::CloseParen(")".into()),
+        ];
+        assert_eq!(parse(&tokens), Expr::List(vec![Expr::Symbol("a".into())]));
+    }
 
-//     #[test]
-//     fn parse_terminal_string_valid() {
-//         let result = parse_case("\"hello\"");
-//         assert_eq!(result, Expr::String("hello".to_string()));
-//     }
+    #[test]
+    fn parse_stray_close_paren_yields_none() {
+        let tokens = vec![Token::CloseParen(")".into())];
+        assert_eq!(parse(&tokens), Expr::None);
+    }
 
-//     #[test]
-//     fn parse_terminal_string_with_spaces() {
-//         let result = parse_case("\"hello world\"");
-//         assert_eq!(result, Expr::String("hello world".to_string()));
-//     }
-
-//     #[test]
-//     #[should_panic]
-//     fn parse_terminal_string_numeric_only_should_panic() {
-//         parse_case("\"123\""); // Not matched by string_re (starts with digit)
-//     }
-
-//     #[test]
-//     fn parse_terminal_symbol_alpha() {
-//         let result = parse_case("foo");
-//         assert_eq!(result, Expr::Symbol("foo".to_string()));
-//     }
-
-//     #[test]
-//     fn parse_terminal_symbol_operator() {
-//         let result = parse_case("+");
-//         assert_eq!(result, Expr::Symbol("+".to_string()));
-//     }
-
-//     #[test]
-//     #[should_panic]
-//     fn parse_terminal_symbol_invalid_starting_with_number() {
-//         parse_case("123abc"); // should panic due to starting with a number
-//     }
-
-//     #[test]
-//     fn parse_terminal_number_integer() {
-//         let result = parse_case("42");
-//         assert_eq!(result, Expr::Number(42.0));
-//     }
-
-//     #[test]
-//     fn parse_terminal_number_float() {
-//         let result = parse_case("3.14");
-//         assert_eq!(result, Expr::Number(3.14));
-//     }
-
-//     #[test]
-//     fn parse_terminal_number_negative() {
-//         let result = parse_case("-10.5");
-//         assert_eq!(result, Expr::Number(-10.5));
-//     }
-
-//     #[test]
-//     fn parse_terminal_bool_true() {
-//         let result = parse_case("true");
-//         assert_eq!(result, Expr::Bool(true));
-//     }
-
-//     #[test]
-//     fn parse_terminal_bool_false() {
-//         let result = parse_case("false");
-//         assert_eq!(result, Expr::Bool(false));
-//     }
-
-//     #[test]
-//     #[should_panic]
-//     fn parse_terminal_unexpected_token_should_panic() {
-//         parse_case("@@invalid@@"); // should not match any regex
-//     }
-
-//     #[test]
-//     #[should_panic]
-//     fn parse_terminal_empty_string_should_panic() {
-//         parse_case("");
-//     }
-// }
+    #[test]
+    #[should_panic] // number parser will panic on invalid numeric literal from lexer
+    fn parse_invalid_number_literal_should_panic() {
+        let tokens = vec![Token::NumberLiteral("3.1.4".into())];
+        let _ = parse(&tokens);
+    }
+}
