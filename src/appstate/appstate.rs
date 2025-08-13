@@ -23,24 +23,29 @@ impl AppState {
     }
 
     pub fn resolve_symbol_to_terminal(&self, symbol: &str) -> Result<Expr, JreplErr> {
-        let symbol_table = &self.state.symbol_table;
-
-        let referent = symbol_table
+        let referent = self
+            .state
+            .symbol_table
             .get(symbol)
-            .ok_or_else(|| JreplErr::UndefinedSymbol("Undefined symbol: {symbol}.".to_string()))?;
+            .ok_or_else(|| JreplErr::UndefinedSymbol(format!("Undefined symbol: {}.", symbol)))?;
 
         match referent {
-            Referent::Command(_) => {
-                // TODO: create a specific error enum for this error insted of just using UndefinedSymbol
-                Err(JreplErr::UndefinedSymbol(
-                    "Expected symbol '{symbol}' to resolve to a terminal but instead resolved to a command."
-                        .to_string(),
-                ))
+            Referent::Command(_) => Err(JreplErr::UndefinedSymbol(format!(
+                "Expected '{}' to resolve to a terminal, but resolved to a command.",
+                symbol
+            ))),
+            Referent::Expr(expr) => {
+                if expr.is_terminal() {
+                    Ok(expr.clone())
+                } else if let Expr::Symbol(s) = expr {
+                    self.resolve_symbol_to_terminal(s)
+                } else {
+                    Err(JreplErr::UndefinedSymbol(format!(
+                        "Expected '{}' to resolve to a terminal, but resolved to a non-terminal: {:?}",
+                        symbol, expr
+                    )))
+                }
             }
-            Referent::Expr(expr) => match expr {
-                Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None | Expr::List(_) => Ok(expr.clone()),
-                Expr::Symbol(symbol) => self.resolve_symbol_to_terminal(symbol),
-            },
         }
     }
 
@@ -48,19 +53,19 @@ impl AppState {
         let symbol_table = &self.state.symbol_table;
 
         if symbol_table.is_empty() {
-            // TODO: create a specific error enum for this error insted of just using UndefinedSymbol
-            return Err(JreplErr::UndefinedSymbol("symbol_table is empty. 0.1".to_string()));
+            return Err(JreplErr::UndefinedSymbol("symbol table is empty".to_string()));
         }
 
         let referent = symbol_table
             .get(symbol)
-            .ok_or_else(|| JreplErr::UndefinedSymbol("Undefined symbol: {symbol}. Expected a command.".to_string()))?;
+            .ok_or_else(|| JreplErr::UndefinedSymbol(format!("Undefined symbol: {}. Expected a command.", symbol)))?;
 
         match referent {
-            Referent::Command(command) => Ok(command),
-            _ => Err(JreplErr::UndefinedSymbol(
-                "Found symbol: '{symbol}' where a command was expected.".to_string(),
-            )),
+            Referent::Command(cmd) => Ok(cmd),
+            Referent::Expr(expr) => Err(JreplErr::UndefinedSymbol(format!(
+                "Found symbol '{}' but it resolves to a non-command: {:?}.",
+                symbol, expr
+            ))),
         }
     }
 

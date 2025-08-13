@@ -7,23 +7,27 @@ mod statics;
 use clap::Parser;
 use command_interpreter::interpreter::interpret;
 use io::read::user_input;
+use rustyline::DefaultEditor;
+use rustyline::Result;
 use statics::commands::get_commands;
 use std::io::Write;
 
-use crate::{appstate::AppState, command_interpreter::types::Effect};
+use crate::{
+    appstate::AppState,
+    command_interpreter::types::{Effect, Expr},
+};
 
-fn main() {
+fn main() -> Result<()> {
     let args = Args::parse();
     // let json = extract_json(&args.input_files);
 
     let mut app_state = AppState::new();
     app_state.set_commands(get_commands());
 
-    loop {
-        print!(">");
-        std::io::stdout().flush().expect("Error flushing stdout");
+    let mut tui = DefaultEditor::new()?;
 
-        let user_input = user_input();
+    loop {
+        let user_input = tui.readline(">")?;
         let effect = interpret(&app_state, &user_input);
 
         print_effect(&effect);
@@ -32,56 +36,50 @@ fn main() {
             app_state.set_next_state(state);
         }
 
-        // app_state.set_next_state(state);
-
-        // let next_state = effect.apply();
-        // app_state.set_next_state(next_state);
-
-        // could cause state change (ie. create a new symbol or change the value of a symbol or undo the last undoable command ('help' isnt undoable)),
-        // could also just yeald a string to be printed to the UI (ie. the held command)
-
-        // state.update(next_state);
-
         // update UI based on changed state
 
         if app_state.should_exit() {
             break;
         }
-
-        // if user_input == "q" {
-        //     break;
-        // }
     }
+
+    Ok(())
 }
 
 pub fn print_effect(effect: &Effect) {
-    if let Some(eval_value) = &effect.eval_value {
-        println!("----------------------------------");
-        println!("Evaluated value: {:?}", eval_value);
+    // Value
+    if let Some(ev) = &effect.eval_value {
+        match ev {
+            Expr::String(s) => print!("{}", s), // <-- preserves newlines
+            other => println!("Evaluated value: {:?}", other),
+        }
     }
+
+    // Next state
     if let Some(next_state) = &effect.next_state {
-        println!("----------------------------------");
         println!(
             "Next state: [state with {} commands, exit={}]",
             next_state.commands_len(),
             next_state.get_exit(),
         );
     }
+
+    // Feedback
     if let Some(feedback) = &effect.user_feedback {
-        println!("----------------------------------");
         println!("User feedback: {}", feedback);
     }
+
+    // Error (keep debug unless you implement Display for JreplErr)
     if let Some(err) = &effect.err {
-        println!("----------------------------------");
-        println!("Error: {:?}", err);
+        eprintln!("Error: {:?}", err);
     }
-    // If nothing was Some, print that it's empty
+
+    // Empty effect
     if effect.eval_value.is_none()
         && effect.next_state.is_none()
         && effect.user_feedback.is_none()
         && effect.err.is_none()
     {
-        println!("----------------------------------");
         println!("Effect: empty (no value, feedback, state, or error)");
     }
 }
