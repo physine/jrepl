@@ -28,6 +28,13 @@ impl Expr {
     pub fn is_terminal(&self) -> bool {
         matches!(self, Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None)
     }
+    pub fn is_literal(&self) -> bool {
+        match self {
+            Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None => true,
+            Expr::Symbol(_) => false,
+            Expr::List(xs) => xs.iter().all(|e| e.is_literal()),
+        }
+    }
 }
 
 // #[derive(Debug, PartialEq)]
