@@ -34,6 +34,12 @@ mod test {
     }
 
     #[test]
+    fn interpret_write_read_f() {
+        let effect1 = run("(defn f (ld \"temp.json\"))");
+        let effect2 = run("(f)");
+    }
+
+    #[test]
     fn interpret_true_literal() {
         let effect = run("(true)");
 

@@ -1,14 +1,22 @@
+use std::fs;
+
 use clap::builder;
 
 use crate::{
     appstate::AppState,
-    command_interpreter::{eval::number_of, types::Effect},
+    command_interpreter::{
+        eval::number_of,
+        types::{Effect, FileValue},
+    },
 };
 use crate::{appstate::State, command_interpreter::command::Command};
 use crate::{
     command_interpreter::{eval, types::Expr},
     errors::errors::JreplErr,
 };
+
+use crate::command_interpreter::eval::value_of;
+use crate::command_interpreter::types::Referent;
 
 pub fn get_commands() -> Vec<Command> {
     vec![
@@ -149,7 +157,8 @@ pub fn get_commands() -> Vec<Command> {
 
                 Ok(Effect::from_eval_value(Expr::Number(result)))
             }),
-        }, // Command {
+        },
+        // Command {
         //     symbol: "search".into(),
         //     description: "".into(),
         //     // param_format: [descripion="target-text" type="String" size="1"]
@@ -165,16 +174,99 @@ pub fn get_commands() -> Vec<Command> {
         //     description: "".into(),
         //     // param_format: ""
         // },
-        // Command {
-        //     symbol: "quit".into(),
-        //     description: "".into(),
-        //     // param_format: ""
-        // },
-        // Command {
-        //     symbol: "load".into(),
-        //     description: "".into(),
-        //     // param_format: [description="files to load from disc" type="String" size="1..n"]
-        // },
+        Command {
+            symbol: "defn".to_string(),
+            description: "defn \t Define or redefine a symbol. Usage: (defn <name> <expr>)".to_string(),
+            eval_fn_ptr: Box::new(|app_state: &AppState, exprs: &[Expr]| {
+                if exprs.len() != 2 {
+                    return Err(JreplErr::OperatorFormatErr(
+                        "'defn' expects exactly 2 arguments: <name> <expr>".to_string(),
+                    ));
+                }
+
+                let name = match &exprs[0] {
+                    Expr::Symbol(s) => s.clone(),
+                    other => {
+                        return Err(JreplErr::OperatorFormatErr(format!(
+                            "'defn' first argument must be a symbol name, got {:?}",
+                            other
+                        )));
+                    }
+                };
+
+                // Evaluate the value expression
+                let value = value_of(app_state, &exprs[1])?;
+
+                // Only allow terminals to be bound, so later resolution works predictably.
+                if !value.is_literal() {
+                    return Err(JreplErr::UndefinedSymbol(format!(
+                        "'defn' value must evaluate to a terminal (String|Number|Bool|None), got {:?}",
+                        value
+                    )));
+                }
+
+                let next_state = app_state.apply_action(|state| {
+                    state.symbol_table.insert(name.clone(), Referent::Expr(value.clone()));
+                });
+
+                Ok(Effect {
+                    eval_value: Some(value), // return the bound value
+                    next_state: Some(next_state),
+                    user_feedback: None,
+                    err: None,
+                })
+            }),
+        },
+        Command {
+            symbol: "ld".to_string(),
+            description: r#"ld 	 Load a file. Usage: (ld "<path>") or (ld pathSymbol)"#.to_string(),
+            eval_fn_ptr: Box::new(|app_state: &AppState, exprs: &[Expr]| {
+                if exprs.len() != 1 {
+                    return Err(JreplErr::OperatorFormatErr(
+                        "'ld' expects exactly 1 argument: <path>".to_string(),
+                    ));
+                }
+
+                // Evaluate the argument (allow symbols or expressions that produce a string)
+                let path_expr = value_of(app_state, &exprs[0])?;
+                let path = match path_expr {
+                    Expr::String(s) => s,
+                    other => {
+                        return Err(JreplErr::OperatorFormatErr(format!(
+                            "'ld' path must evaluate to a String, got {:?}",
+                            other
+                        )));
+                    }
+                };
+
+                // Read file
+                let bytes = fs::read(&path)
+                    .map_err(|e| JreplErr::OperatorFormatErr(format!("ld: failed to read '{}': {}", path, e)))?;
+
+                // Best-effort MIME guess
+                let mime = {
+                    let p = path.to_lowercase();
+                    if p.ends_with(".json") {
+                        Some("application/json".to_string())
+                    } else if p.ends_with(".txt") {
+                        Some("text/plain".to_string())
+                    } else if p.ends_with(".csv") {
+                        Some("text/csv".to_string())
+                    } else if p.ends_with(".png") {
+                        Some("image/png".to_string())
+                    } else if p.ends_with(".jpg") || p.ends_with(".jpeg") {
+                        Some("image/jpeg".to_string())
+                    } else if p.ends_with(".pdf") {
+                        Some("application/pdf".to_string())
+                    } else {
+                        None
+                    }
+                };
+
+                let file = FileValue { path, bytes, mime };
+                Ok(Effect::from_eval_value(Expr::File(file)))
+            }),
+        },
         // Command {
         //     symbol: "def".into(),
         //     description: "".into(),

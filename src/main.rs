@@ -6,11 +6,9 @@ mod statics;
 
 use clap::Parser;
 use command_interpreter::interpreter::interpret;
-use io::read::user_input;
 use rustyline::DefaultEditor;
 use rustyline::Result;
 use statics::commands::get_commands;
-use std::io::Write;
 
 use crate::{
     appstate::AppState,

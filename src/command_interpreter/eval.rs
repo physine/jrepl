@@ -4,12 +4,14 @@ use crate::{command_interpreter::types::Expr, errors::errors::JreplErr};
 pub fn eval(app_state: &AppState, expr: &Expr) -> Result<Effect, JreplErr> {
     match expr {
         // terminals pass through
-        Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None => Ok(Effect::from_eval_value(expr.clone())),
+        Expr::File(_) | Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None => {
+            Ok(Effect::from_eval_value(expr.clone()))
+        }
 
         // resolve symbol to terminal
         Expr::Symbol(symbol) => {
-            let expr = app_state.resolve_symbol_to_terminal(symbol)?;
-            Ok(Effect::from_eval_value(expr))
+            let v = app_state.resolve_symbol_value(symbol)?;
+            Ok(Effect::from_eval_value(v))
         }
 
         // lists
@@ -18,30 +20,32 @@ pub fn eval(app_state: &AppState, expr: &Expr) -> Result<Effect, JreplErr> {
                 return Ok(Effect::from_eval_value(Expr::None));
             }
 
-            // single element list acts as grouping; if it’s a command symbol, call it as zero-arg
+            // single element: zero-arg command OR grouped expression
             if expr_list.len() == 1 {
-                match &expr_list[0] {
-                    Expr::Symbol(s) => {
-                        if let Ok(cmd) = app_state.get_command_from_symbol(s) {
-                            return (cmd.eval_fn_ptr)(app_state, &[]);
-                        }
+                if let Expr::Symbol(s) = &expr_list[0] {
+                    if let Ok(cmd) = app_state.get_command_from_symbol(s) {
+                        return (cmd.eval_fn_ptr)(app_state, &[]);
                     }
-                    _ => {}
                 }
                 let v = value_of(app_state, &expr_list[0])?;
                 return Ok(Effect::from_eval_value(v));
             }
 
-            // 2+ elements must start with a command symbol; otherwise return Err (no panic)
+            // NEW: treat a list of literals as a literal value
+            if expr.is_literal() {
+                return Ok(Effect::from_eval_value(expr.clone()));
+            }
+
+            // otherwise must be a command form
             match &expr_list[0] {
                 Expr::Symbol(symbol) => {
                     let command = app_state.get_command_from_symbol(symbol)?;
                     (command.eval_fn_ptr)(app_state, &expr_list[1..])
                 }
-                head => Err(JreplErr::UndefinedSymbol(format!(
+                head => Err(JreplErr::OperatorFormatErr(format!(
                     "Invalid list: expected a command symbol at position 0, found {head:?}. \
                      Multi-element lists must start with a command (e.g., (+ 1 2)). \
-                     To evaluate a literal, put it alone in the list: (42) or (true)."
+                     To evaluate a literal, put it alone in the list or use a list of literals: (42), (true), (\"a\" \"b\")."
                 ))),
             }
         }
@@ -49,15 +53,15 @@ pub fn eval(app_state: &AppState, expr: &Expr) -> Result<Effect, JreplErr> {
 }
 
 pub fn value_of(app_state: &AppState, expr: &Expr) -> Result<Expr, JreplErr> {
-    if expr.is_terminal() {
+    if expr.is_literal() {
         return Ok(expr.clone());
     }
     match expr {
-        Expr::Symbol(s) => app_state.resolve_symbol_to_terminal(s),
+        Expr::Symbol(s) => app_state.resolve_symbol_value(s),
         Expr::List(_) => {
             let eff = eval(app_state, expr)?;
             eff.eval_value
-                .ok_or_else(|| JreplErr::UndefinedSymbol("Subexpression returned no value".to_string()))
+                .ok_or_else(|| JreplErr::OperatorFormatErr("Subexpression returned no value".to_string()))
         }
         _ => unreachable!(),
     }

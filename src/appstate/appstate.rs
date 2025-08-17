@@ -22,7 +22,7 @@ impl AppState {
         self.state = state;
     }
 
-    pub fn resolve_symbol_to_terminal(&self, symbol: &str) -> Result<Expr, JreplErr> {
+    pub fn resolve_symbol_value(&self, symbol: &str) -> Result<Expr, JreplErr> {
         let referent = self
             .state
             .symbol_table
@@ -30,22 +30,14 @@ impl AppState {
             .ok_or_else(|| JreplErr::UndefinedSymbol(format!("Undefined symbol: {}.", symbol)))?;
 
         match referent {
-            Referent::Command(_) => Err(JreplErr::UndefinedSymbol(format!(
-                "Expected '{}' to resolve to a terminal, but resolved to a command.",
+            Referent::Command(_) => Err(JreplErr::OperatorFormatErr(format!(
+                "'{}' refers to a command, not a value.",
                 symbol
             ))),
-            Referent::Expr(expr) => {
-                if expr.is_terminal() {
-                    Ok(expr.clone())
-                } else if let Expr::Symbol(s) = expr {
-                    self.resolve_symbol_to_terminal(s)
-                } else {
-                    Err(JreplErr::UndefinedSymbol(format!(
-                        "Expected '{}' to resolve to a terminal, but resolved to a non-terminal: {:?}",
-                        symbol, expr
-                    )))
-                }
-            }
+            Referent::Expr(expr) => match expr {
+                Expr::Symbol(s) => self.resolve_symbol_value(s),
+                other => Ok(other.clone()), // may be literal list
+            },
         }
     }
 
