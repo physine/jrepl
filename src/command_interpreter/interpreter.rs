@@ -34,6 +34,15 @@ mod test {
     }
 
     #[test]
+    fn interpret_true_literal() {
+        let effect = run("(true)");
+
+        assert!(effect.err.is_none());
+        assert!(effect.user_feedback.is_none());
+        assert!(!effect.eval_value.is_none());
+    }
+
+    #[test]
     fn interpret_exit_sets_exit_flag_and_returns_next_state() {
         let effect = run("(exit)");
         let state = effect.next_state.expect("exit should produce a next_state");

@@ -475,24 +475,24 @@ mod test {
         );
     }
 
-    // #[test]
-    // fn lexer_nested_expressions() {
-    //     let result = lexer("(+ 1 (* 2 3))").expect("[lexer_nested_expressions] Produced an error.");
-    //     assert_eq!(
-    //         result,
-    //         vec![
-    //             open(),
-    //             symbol("+"),
-    //             symbol("1"),
-    //             open(),
-    //             symbol("*"),
-    //             symbol("2"),
-    //             symbol("3"),
-    //             close(),
-    //             close()
-    //         ]
-    //     );
-    // }
+    #[test]
+    fn lexer_nested_expressions() {
+        let result = lexer("(+ 1 (* 2 3))").expect("[lexer_nested_expressions] Produced an error.");
+        assert_eq!(
+            result,
+            vec![
+                open(),
+                symbol("+"),
+                number("1"),
+                open(),
+                symbol("*"),
+                number("2"),
+                number("3"),
+                close(),
+                close()
+            ]
+        );
+    }
 
     #[test]
     fn lexer_ignores_extra_spaces() {

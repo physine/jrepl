@@ -216,6 +216,16 @@ mod test {
     }
 
     #[test]
+    fn parse_true_literals() {
+        let tokens = vec![
+            Token::OpenParen("(".into()),
+            Token::BoolLiteral("true".into()),
+            Token::CloseParen(")".into()),
+        ];
+        assert_eq!(parse(&tokens), Expr::List(vec![Expr::Bool(true)]));
+    }
+
+    #[test]
     fn parse_boolean_literals() {
         let tokens = vec![
             Token::OpenParen("(".into()),

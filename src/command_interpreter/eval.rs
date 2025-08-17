@@ -3,25 +3,46 @@ use crate::{command_interpreter::types::Expr, errors::errors::JreplErr};
 
 pub fn eval(app_state: &AppState, expr: &Expr) -> Result<Effect, JreplErr> {
     match expr {
+        // terminals pass through
         Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None => Ok(Effect::from_eval_value(expr.clone())),
-        // get the terminal at the end of the symbol chain.
+
+        // resolve symbol to terminal
         Expr::Symbol(symbol) => {
-            // this will never be a command which is bound to a symbol because those symbols are only found at the start of lists, which matches the case below
             let expr = app_state.resolve_symbol_to_terminal(symbol)?;
             Ok(Effect::from_eval_value(expr))
         }
+
+        // lists
         Expr::List(expr_list) => {
             if expr_list.is_empty() {
                 return Ok(Effect::from_eval_value(Expr::None));
             }
+
+            // single element list acts as grouping; if it’s a command symbol, call it as zero-arg
+            if expr_list.len() == 1 {
+                match &expr_list[0] {
+                    Expr::Symbol(s) => {
+                        if let Ok(cmd) = app_state.get_command_from_symbol(s) {
+                            return (cmd.eval_fn_ptr)(app_state, &[]);
+                        }
+                    }
+                    _ => {}
+                }
+                let v = value_of(app_state, &expr_list[0])?;
+                return Ok(Effect::from_eval_value(v));
+            }
+
+            // 2+ elements must start with a command symbol; otherwise return Err (no panic)
             match &expr_list[0] {
                 Expr::Symbol(symbol) => {
                     let command = app_state.get_command_from_symbol(symbol)?;
                     (command.eval_fn_ptr)(app_state, &expr_list[1..])
                 }
-                other => {
-                    panic!("List does not start with Command. Found: {:?}", other);
-                }
+                head => Err(JreplErr::UndefinedSymbol(format!(
+                    "Invalid list: expected a command symbol at position 0, found {head:?}. \
+                     Multi-element lists must start with a command (e.g., (+ 1 2)). \
+                     To evaluate a literal, put it alone in the list: (42) or (true)."
+                ))),
             }
         }
     }
@@ -70,11 +91,11 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "List does not start with Command")]
-    fn eval_list_head_is_not_symbol_panics() {
+    fn eval_grouped_literal_list_ok() {
         let app_state = AppState::new();
-        let ast = Expr::List(vec![Expr::String("hello".into())]);
-        let _ = eval(&app_state, &ast);
+        let ast = Expr::List(vec![Expr::Bool(true)]);
+        let out = eval(&app_state, &ast).map(|e| e.eval_value).unwrap();
+        assert_eq!(out, Some(Expr::Bool(true)));
     }
 
     #[test]
