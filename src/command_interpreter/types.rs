@@ -17,20 +17,31 @@ pub enum Expr {
     None,
     // Operator(String),
     // Command(String),
-    // File(File),
+    File(FileValue),
     // State(AppState)
     // --------------- Expandables ---------------
     Symbol(String),
     List(Vec<Expr>), // e.g. (add 1 2)
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct FileValue {
+    /// Original path or identifier (useful for debugging / provenance).
+    pub path: String,
+    /// Raw bytes of the file (works for both text and binary).
+    pub bytes: Vec<u8>,
+    /// Optional MIME type if you detect/attach one (e.g., "text/plain", "application/pdf").
+    pub mime: Option<String>,
+}
+
 impl Expr {
     pub fn is_terminal(&self) -> bool {
         matches!(self, Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None)
     }
+
     pub fn is_literal(&self) -> bool {
         match self {
-            Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None => true,
+            Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None | Expr::File(_) => true,
             Expr::Symbol(_) => false,
             Expr::List(xs) => xs.iter().all(|e| e.is_literal()),
         }

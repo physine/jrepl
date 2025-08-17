@@ -4,7 +4,9 @@ use crate::{command_interpreter::types::Expr, errors::errors::JreplErr};
 pub fn eval(app_state: &AppState, expr: &Expr) -> Result<Effect, JreplErr> {
     match expr {
         // terminals pass through
-        Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None => Ok(Effect::from_eval_value(expr.clone())),
+        Expr::File(_) | Expr::String(_) | Expr::Number(_) | Expr::Bool(_) | Expr::None => {
+            Ok(Effect::from_eval_value(expr.clone()))
+        }
 
         // resolve symbol to terminal
         Expr::Symbol(symbol) => {

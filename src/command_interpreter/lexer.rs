@@ -1,3 +1,5 @@
+use clap::builder::Str;
+
 use crate::errors::errors::JreplErr;
 
 pub fn lexer(user_input: &str) -> Result<Vec<Token>, JreplErr> {
@@ -127,27 +129,42 @@ fn transition_table(mut acc: Accumulator, c: char) -> Result<Accumulator, JreplE
         },
 
         Context::String => match c {
-            '"' /* make sure the previous char isnt escaping the " */ => {
-                acc.memory.push(c);
-                acc.tokens.push(Token::StringLiteral(String::from(acc.memory.clone())));
-                acc.reset_memory();
-                acc.context_stack.pop();
-                Ok(acc)
+            // Close quote: only if it's NOT escaped (odd number of trailing backslashes means escaped)
+            '"' => {
+                let mut bs = 0;
+                for b in acc.memory.as_bytes().iter().rev() {
+                    if *b == b'\\' { bs += 1 } else { break }
+                }
+                let quote_is_escaped = bs % 2 == 1;
+
+                if quote_is_escaped {
+                    // it's an escaped quote => include it in the content
+                    acc.memory.push('"');
+                    Ok(acc)
+                } else {
+                    // finalize WITHOUT storing the quotes
+                    let inner = if acc.memory.starts_with('"') {
+                        acc.memory[1..].to_string()
+                    } else {
+                        acc.memory.clone()
+                    };
+                    acc.tokens.push(Token::StringLiteral(inner));
+                    acc.reset_memory();
+                    acc.context_stack.pop();
+                    Ok(acc)
+                }
             }
 
-            // TODO: latter on support string interpolation.
-
+            // TODO: later support string interpolation.
             _ if c.is_ascii() => {
                 acc.memory.push(c);
                 Ok(acc)
             }
 
-            _ => Err(JreplErr::InvalidSymbol(
-                format!(
-                    "Found Invalid char in user_input while tokenizing a String. Char: {}.",
-                    c
-                )
-            )),
+            _ => Err(JreplErr::InvalidSymbol(format!(
+                "Found invalid char in string literal: {}.",
+                c
+            ))),
         },
 
         Context::Number => match c {
@@ -191,6 +208,16 @@ fn transition_table(mut acc: Accumulator, c: char) -> Result<Accumulator, JreplE
         },
 
         Context::SymbolOrTrue => match c {
+            _ if acc.memory.ends_with("f") && (c == ' ' || c == ')') => {
+                if c == ')' {
+                    acc.delimiter_balance_dec()?;
+                }
+                acc.tokens.push(Token::Symbol(String::from("t")));
+                acc.context_stack.pop();
+                acc.reset_memory();
+                Ok(acc)
+            }
+
             _ if acc.memory.ends_with("t") && c == 'r' => {
                 acc.memory.push(c);
                 Ok(acc)
@@ -237,6 +264,16 @@ fn transition_table(mut acc: Accumulator, c: char) -> Result<Accumulator, JreplE
         },
 
         Context::SymbolOrFalse => match c {
+            _ if acc.memory.ends_with("f") && (c == ' ' || c == ')') => {
+                if c == ')' {
+                    acc.delimiter_balance_dec()?;
+                }
+                acc.tokens.push(Token::Symbol(String::from("f")));
+                acc.context_stack.pop();
+                acc.reset_memory();
+                Ok(acc)
+            }
+
             _ if acc.memory.ends_with("f") && c == 'a' => {
                 acc.memory.push(c);
                 Ok(acc)
@@ -282,8 +319,8 @@ fn transition_table(mut acc: Accumulator, c: char) -> Result<Accumulator, JreplE
             }
 
             _ => Err(JreplErr::InvalidSymbol(format!(
-                "Found Invalid char in user_input while tokenizing a Bool or Symbol. Char: {}.",
-                c
+                "Found Invalid char in user_input while tokenizing a Bool literal False or Symbol. Char: '{}', Memory: '{}'",
+                c, acc.memory
             ))),
         },
 
@@ -417,6 +454,30 @@ mod test {
     }
 
     #[test]
+    fn lexer_load_file_and_defn() {
+        let result = lexer("(defn f (ld \"temp.json\"))").expect("[lexer_load_file_and_defn] Produced an error.");
+        assert_eq!(
+            result,
+            vec![
+                open(),
+                symbol("defn"),
+                symbol("f"),
+                open(),
+                symbol("ld"),
+                strlit("temp.json"),
+                close(),
+                close()
+            ]
+        );
+    }
+
+    #[test]
+    fn lexer_load_file() {
+        let result = lexer("(ld \"temp.json\")").expect("[lexer_load_file] Produced an error.");
+        assert_eq!(result, vec![open(), symbol("ld"), strlit("temp.json"), close()]);
+    }
+
+    #[test]
     fn lexer_help_command() {
         let result = lexer("(help)").expect("[lexer_help_command] Produced an error.");
         assert_eq!(result, vec![open(), symbol("help"), close()]);
@@ -530,7 +591,7 @@ mod test {
             vec![
                 open(),
                 symbol("search"),
-                strlit("\"target(-t)ext\""),
+                strlit("target(-t)ext"),
                 symbol("filename"),
                 close()
             ]
@@ -597,7 +658,7 @@ mod test {
     #[test]
     fn lexer_string_literal_only_expr() {
         let result = lexer("(\"hello world\")").expect("[lexer_string_literal_only_expr] Produced an error.");
-        assert_eq!(result, vec![open(), strlit("\"hello world\""), close()]);
+        assert_eq!(result, vec![open(), strlit("hello world"), close()]);
     }
 
     #[test]
@@ -605,7 +666,7 @@ mod test {
         let result = lexer("(print \"num is\" 100)").expect("[lexer_string_literal_and_number] Produced an error.");
         assert_eq!(
             result,
-            vec![open(), symbol("print"), strlit("\"num is\""), number("100"), close()]
+            vec![open(), symbol("print"), strlit("num is"), number("100"), close()]
         );
     }
 
@@ -618,7 +679,7 @@ mod test {
             vec![
                 open(),
                 symbol("echo"),
-                strlit("\" a spaced string \""),
+                strlit(" a spaced string "),
                 comment("`a comment`"),
                 symbol("foo"),
                 close()

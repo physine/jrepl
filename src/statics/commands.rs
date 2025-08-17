@@ -1,8 +1,13 @@
+use std::fs;
+
 use clap::builder;
 
 use crate::{
     appstate::AppState,
-    command_interpreter::{eval::number_of, types::Effect},
+    command_interpreter::{
+        eval::number_of,
+        types::{Effect, FileValue},
+    },
 };
 use crate::{appstate::State, command_interpreter::command::Command};
 use crate::{
@@ -169,11 +174,6 @@ pub fn get_commands() -> Vec<Command> {
         //     description: "".into(),
         //     // param_format: ""
         // },
-        // Command {
-        //     symbol: "quit".into(),
-        //     description: "".into(),
-        //     // param_format: ""
-        // },
         Command {
             symbol: "defn".to_string(),
             description: "defn \t Define or redefine a symbol. Usage: (defn <name> <expr>)".to_string(),
@@ -215,6 +215,56 @@ pub fn get_commands() -> Vec<Command> {
                     user_feedback: None,
                     err: None,
                 })
+            }),
+        },
+        Command {
+            symbol: "ld".to_string(),
+            description: r#"ld 	 Load a file. Usage: (ld "<path>") or (ld pathSymbol)"#.to_string(),
+            eval_fn_ptr: Box::new(|app_state: &AppState, exprs: &[Expr]| {
+                if exprs.len() != 1 {
+                    return Err(JreplErr::OperatorFormatErr(
+                        "'ld' expects exactly 1 argument: <path>".to_string(),
+                    ));
+                }
+
+                // Evaluate the argument (allow symbols or expressions that produce a string)
+                let path_expr = value_of(app_state, &exprs[0])?;
+                let path = match path_expr {
+                    Expr::String(s) => s,
+                    other => {
+                        return Err(JreplErr::OperatorFormatErr(format!(
+                            "'ld' path must evaluate to a String, got {:?}",
+                            other
+                        )));
+                    }
+                };
+
+                // Read file
+                let bytes = fs::read(&path)
+                    .map_err(|e| JreplErr::OperatorFormatErr(format!("ld: failed to read '{}': {}", path, e)))?;
+
+                // Best-effort MIME guess
+                let mime = {
+                    let p = path.to_lowercase();
+                    if p.ends_with(".json") {
+                        Some("application/json".to_string())
+                    } else if p.ends_with(".txt") {
+                        Some("text/plain".to_string())
+                    } else if p.ends_with(".csv") {
+                        Some("text/csv".to_string())
+                    } else if p.ends_with(".png") {
+                        Some("image/png".to_string())
+                    } else if p.ends_with(".jpg") || p.ends_with(".jpeg") {
+                        Some("image/jpeg".to_string())
+                    } else if p.ends_with(".pdf") {
+                        Some("application/pdf".to_string())
+                    } else {
+                        None
+                    }
+                };
+
+                let file = FileValue { path, bytes, mime };
+                Ok(Effect::from_eval_value(Expr::File(file)))
             }),
         },
         // Command {
